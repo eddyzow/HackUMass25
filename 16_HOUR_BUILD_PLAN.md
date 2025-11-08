@@ -51,12 +51,6 @@ mongoose.connect(process.env.MONGODB_URI)
 app.listen(5000, () => console.log('Server on port 5000'));
 ```
 
-**.env**
-```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/language-learning
-AZURE_SPEECH_KEY=your_key
-AZURE_SPEECH_REGION=eastus
-```
 
 ### Frontend (React + Vite)
 ```bash
