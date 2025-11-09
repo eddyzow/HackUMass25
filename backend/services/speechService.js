@@ -7,7 +7,10 @@ class SpeechService {
       process.env.AZURE_SPEECH_KEY,
       process.env.AZURE_SPEECH_REGION
     );
+    this.speechConfig.setProfanity(sdk.ProfanityOption.Raw);
   }
+
+  
 
   async transcribeAudio(audioFilePath, language = 'zh-CN') {
     console.log(`🎤 Transcribing audio: ${audioFilePath}, language: ${language}`);
