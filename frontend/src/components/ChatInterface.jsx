@@ -169,7 +169,6 @@ function ChatInterface({ messages }) {
                         {msg.phonemes[0].detectedLanguage}
                       </div>
                       <div className="warning-suggestion">
-                        Please switch to the correct language mode or speak in the selected language.
                       </div>
                     </div>
                   ) : (
