@@ -59,6 +59,12 @@ body {
   font-size: 16px;
   cursor: pointer;
   background: white;
+  color: #1f2937;
+}
+
+.language-selector select option {
+  background: white;
+  color: #1f2937;
 }
 
 .main-content {
