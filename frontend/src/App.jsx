@@ -91,7 +91,7 @@ function App() {
       <header className="app-header">
         <div className="brand">
           <div className="logo">
-            <img src="/logo-transparent.png" alt="SpeakFlow Logo" className="logo-image" />
+            <img src="logo-transparent.png" alt="SpeakFlow Logo" className="logo-image" />
             <h1>SpeakFlow</h1>
           </div>
           <div className="header-actions">
