@@ -229,7 +229,7 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
             type="text"
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
-            placeholder={language === 'zh-CN' ? '输入中文消息或点击麦克风说话...' : 'Type a message or click mic to speak...'}
+            placeholder='输入中文消息或点击麦克风说话... / Enter a message in Chinese or tap the microphone to speak.'
             className="chat-text-input"
             disabled={isLoading || isRecording}
           />
