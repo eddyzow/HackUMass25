@@ -29,10 +29,40 @@ function App() {
     try {
       const result = await processAudio(audioBlob, sessionId, language);
       
-      setMessages(result.conversation);
+      console.log('📊 Full API response:', result);
+      
+      // Check if there's an error in the response
+      if (result.error) {
+        // Add error message to conversation
+        setMessages(prevMessages => [
+          ...prevMessages,
+          {
+            role: 'bot',
+            text: `❌ ${result.userFriendlyMessage}`,
+            timestamp: new Date(),
+            isError: true,
+            suggestions: result.suggestions
+          }
+        ]);
+      } else {
+        console.log('📊 Conversation messages:', result.conversation);
+        console.log('📊 First user message phonemes:', result.conversation?.find(m => m.role === 'user')?.phonemes);
+        setMessages(result.conversation);
+      }
     } catch (error) {
       console.error('Error processing audio:', error);
-      alert('Failed to process audio. Please check your backend connection and Azure credentials.');
+      
+      // Add error message to conversation
+      setMessages(prevMessages => [
+        ...prevMessages,
+        {
+          role: 'bot',
+          text: `❌ Network error: ${error.response?.data?.userFriendlyMessage || 'Failed to connect to the server. Please check that the backend is running.'}`,
+          timestamp: new Date(),
+          isError: true,
+          suggestions: error.response?.data?.suggestions || ['Make sure the backend server is running on port 5001', 'Check your internet connection']
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }

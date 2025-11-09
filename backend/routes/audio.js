@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const speechService = require('../services/speechService');
+const geminiService = require('../services/geminiService');
 const feedbackGenerator = require('../services/feedbackGenerator');
 const Conversation = require('../models/Conversation');
 
@@ -33,15 +34,26 @@ const upload = multer({
 });
 
 router.post('/process', upload.single('audio'), async (req, res) => {
+  console.log('\n=== NEW AUDIO PROCESSING REQUEST ===');
+  console.log('Time:', new Date().toISOString());
+  
   try {
     const { sessionId, language = 'zh-CN' } = req.body;
     const audioFile = req.file;
 
+    console.log('Request details:', {
+      sessionId,
+      language,
+      hasAudioFile: !!audioFile,
+      audioFileName: audioFile?.filename
+    });
+
     if (!audioFile) {
+      console.error('❌ No audio file in request');
       return res.status(400).json({ error: 'No audio file provided' });
     }
 
-    console.log(`Processing audio for session ${sessionId}, language: ${language}`);
+    console.log(`✅ Processing audio for session ${sessionId}, language: ${language}`);
 
     // 1. Transcribe audio
     const transcription = await speechService.transcribeAudio(
@@ -55,18 +67,41 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       transcription.text,
       language
     );
+    
+    console.log('📊 Extracted phonemes data:', JSON.stringify(extractPhonemes(assessment.words), null, 2));
+    
+    // Recalculate overall scores based on phoneme averages
+    const phonemeBasedScores = recalculateOverallScores(assessment.words);
+    console.log('🔢 Recalculated scores from phonemes:', phonemeBasedScores);
+    
+    // Override assessment scores with phoneme-based calculations
+    assessment.pronunciationScore = phonemeBasedScores.pronunciation;
+    assessment.accuracyScore = phonemeBasedScores.accuracy;
+    // Keep fluency from Azure as it's based on timing, not phonemes
 
-    // 3. Generate feedback
+    // 3. Generate feedback (quantitative - unchanged)
     const feedback = feedbackGenerator.generateFeedback(assessment, language);
 
-    // 4. Generate bot response
-    const botResponse = feedbackGenerator.generateConversationResponse(
+    // 4. Get conversation history for context
+    let conversation = await Conversation.findOne({ sessionId });
+    const conversationHistory = conversation?.messages || [];
+
+    // 5. Generate bot response using Gemini AI (qualitative)
+    const botResponse = await geminiService.generateConversationResponse(
       transcription.text,
+      assessment,
+      language,
+      conversationHistory
+    );
+
+    // 6. Generate qualitative evaluation using Gemini
+    const qualitativeEvaluation = await geminiService.evaluateQualitativeResponse(
+      transcription.text,
+      assessment,
       language
     );
 
-    // 5. Save to database
-    let conversation = await Conversation.findOne({ sessionId });
+    // 7. Save to database
     
     if (!conversation) {
       conversation = new Conversation({ sessionId, language, messages: [] });
@@ -76,12 +111,15 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       role: 'user',
       text: transcription.text,
       audioUrl: `/uploads/${audioFile.filename}`,
+      phonemes: extractPhonemes(assessment.words),
       feedback: {
         pronunciationScore: assessment.pronunciationScore,
         accuracyScore: assessment.accuracyScore,
         fluencyScore: assessment.fluencyScore,
+        pronunciation: feedback.pronunciation,
         suggestions: feedback.suggestions,
-        message: feedback.overall
+        message: feedback.overall,
+        qualitativeEvaluation: qualitativeEvaluation  // AI-generated insights
       }
     });
 
@@ -98,14 +136,153 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       assessment,
       feedback,
       botResponse,
-      conversation: conversation.messages
+      conversation: conversation.messages,
+      detailedAnalysis: {
+        totalDuration: calculateTotalDuration(assessment.words),
+        wordsAnalyzed: assessment.words?.length || 0,
+        timestamp: new Date().toISOString()
+      }
     });
+    
+    console.log('✅ Request completed successfully\n');
 
   } catch (error) {
-    console.error('Audio processing error:', error);
-    res.status(500).json({ error: 'Failed to process audio: ' + error.message });
+    console.error('\n❌ ========== ERROR ==========');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('=============================\n');
+    
+    // Send error response to frontend instead of crashing
+    res.status(400).json({ 
+      error: true,
+      message: error.message,
+      userFriendlyMessage: getUserFriendlyErrorMessage(error.message, language),
+      suggestions: getErrorSuggestions(error.message, language)
+    });
   }
 });
+
+// Helper function to extract phonemes with expected vs actual comparison
+function extractPhonemes(words) {
+  if (!words || !Array.isArray(words)) return [];
+  
+  return words.map(word => {
+    // Recalculate word score based on average phoneme scores
+    let calculatedWordScore = word.PronunciationAssessment?.AccuracyScore || 0;
+    
+    if (word.Phonemes && word.Phonemes.length > 0) {
+      const phonemeScores = word.Phonemes
+        .map(p => p.PronunciationAssessment?.AccuracyScore || 0)
+        .filter(score => score > 0); // Exclude 0 scores
+      
+      if (phonemeScores.length > 0) {
+        calculatedWordScore = phonemeScores.reduce((sum, score) => sum + score, 0) / phonemeScores.length;
+      }
+    }
+    
+    return {
+      word: word.Word,
+      offset: word.Offset,
+      duration: word.Duration,
+      wordScore: Math.round(calculatedWordScore), // Use recalculated score
+      originalWordScore: word.PronunciationAssessment?.AccuracyScore || 0, // Keep original for reference
+      errorType: word.PronunciationAssessment?.ErrorType || 'None',
+      phonemes: word.Phonemes ? word.Phonemes.map(p => ({
+        phoneme: p.Phoneme,
+        score: p.PronunciationAssessment?.AccuracyScore || 0,
+        offset: p.Offset,
+        duration: p.Duration,
+        nBestPhonemes: p.PronunciationAssessment?.NBestPhonemes || []
+      })) : [],
+      syllables: word.Syllables || []
+    };
+  });
+}
+
+function calculateTotalDuration(words) {
+  if (!words || words.length === 0) return 0;
+  const lastWord = words[words.length - 1];
+  return (lastWord.Offset + lastWord.Duration) / 10000000; // Convert to seconds
+}
+
+function recalculateOverallScores(words) {
+  if (!words || words.length === 0) {
+    return { pronunciation: 0, accuracy: 0 };
+  }
+
+  let totalPhonemeScore = 0;
+  let totalPhonemeCount = 0;
+  let totalWordScore = 0;
+  let totalWordCount = 0;
+
+  words.forEach(word => {
+    // Calculate average phoneme score for this word
+    if (word.Phonemes && word.Phonemes.length > 0) {
+      const phonemeScores = word.Phonemes
+        .map(p => p.PronunciationAssessment?.AccuracyScore || 0)
+        .filter(score => score > 0);
+      
+      if (phonemeScores.length > 0) {
+        const wordAverage = phonemeScores.reduce((sum, score) => sum + score, 0) / phonemeScores.length;
+        totalWordScore += wordAverage;
+        totalWordCount++;
+        
+        // Also accumulate individual phoneme scores
+        phonemeScores.forEach(score => {
+          totalPhonemeScore += score;
+          totalPhonemeCount++;
+        });
+      }
+    }
+  });
+
+  const pronunciationScore = totalWordCount > 0 
+    ? Math.round(totalWordScore / totalWordCount)
+    : 0;
+    
+  const accuracyScore = totalPhonemeCount > 0
+    ? Math.round(totalPhonemeScore / totalPhonemeCount)
+    : 0;
+
+  return {
+    pronunciation: pronunciationScore,
+    accuracy: accuracyScore
+  };
+}
+
+function getUserFriendlyErrorMessage(errorMessage, language) {
+  if (errorMessage.includes('not recognized') || errorMessage.includes('no match')) {
+    return language === 'zh-CN' 
+      ? "抱歉，我没有听清楚你说的话。请再试一次，说得更清楚一些。"
+      : "Sorry, I couldn't understand what you said. Please try again and speak more clearly.";
+  } else if (errorMessage.includes('subscription') || errorMessage.includes('authentication')) {
+    return "There's an issue with the Azure Speech API credentials. Please check the backend configuration.";
+  } else if (errorMessage.includes('timeout')) {
+    return "The request took too long. Please try recording a shorter phrase.";
+  } else {
+    return "An error occurred while processing your audio. Please try again.";
+  }
+}
+
+function getErrorSuggestions(errorMessage, language) {
+  const suggestions = [];
+  
+  if (errorMessage.includes('not recognized') || errorMessage.includes('no match')) {
+    if (language === 'zh-CN') {
+      suggestions.push('说话时靠近麦克风 (Speak closer to the microphone)');
+      suggestions.push('确保周围环境安静 (Make sure it\'s quiet around you)');
+      suggestions.push('说得慢一些、清楚一些 (Speak slower and more clearly)');
+      suggestions.push('尝试说简单的词语，如"你好"或"谢谢" (Try simple words like "你好" or "谢谢")');
+    } else {
+      suggestions.push('Speak closer to your microphone');
+      suggestions.push('Reduce background noise');
+      suggestions.push('Speak slower and enunciate clearly');
+      suggestions.push('Try simple phrases like "Hello" or "How are you?"');
+    }
+  }
+  
+  return suggestions;
+}
 
 router.get('/conversation/:sessionId', async (req, res) => {
   try {

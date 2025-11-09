@@ -4,12 +4,14 @@ const messageSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'bot'], required: true },
   text: String,
   audioUrl: String,
+  phonemes: mongoose.Schema.Types.Mixed,  // Allow flexible phoneme data structure
   timestamp: { type: Date, default: Date.now },
   feedback: {
     pronunciationScore: Number,
     accuracyScore: Number,
     fluencyScore: Number,
     score: Number,
+    pronunciation: mongoose.Schema.Types.Mixed,  // For detailed pronunciation issues
     suggestions: [String],
     message: String
   }

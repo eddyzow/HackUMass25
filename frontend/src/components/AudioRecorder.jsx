@@ -1,16 +1,41 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import RecordRTC from 'recordrtc';
 
 function AudioRecorder({ onRecordingComplete, language }) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
+  const animationRef = useRef(null);
+  const analyserRef = useRef(null);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+
+      // Set up audio visualization
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      // Start animation loop for waveform
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const updateLevel = () => {
+        if (!analyserRef.current) return;
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        // Scale to 0-100, with better sensitivity
+        const level = Math.min(100, (average / 255) * 200);
+        setAudioLevel(level);
+        animationRef.current = requestAnimationFrame(updateLevel);
+      };
+      updateLevel();
 
       recorderRef.current = new RecordRTC(stream, {
         type: 'audio',
@@ -22,6 +47,7 @@ function AudioRecorder({ onRecordingComplete, language }) {
 
       recorderRef.current.startRecording();
       setIsRecording(true);
+      console.log('🎤 Recording started with audio visualization');
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Please allow microphone access');
@@ -33,6 +59,12 @@ function AudioRecorder({ onRecordingComplete, language }) {
 
     setIsRecording(false);
     setIsProcessing(true);
+    setAudioLevel(0);
+
+    // Stop animation
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
 
     recorderRef.current.stopRecording(() => {
       const blob = recorderRef.current.getBlob();
@@ -46,6 +78,14 @@ function AudioRecorder({ onRecordingComplete, language }) {
     });
   };
 
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="audio-recorder">
       {!isRecording && !isProcessing && (
@@ -55,9 +95,31 @@ function AudioRecorder({ onRecordingComplete, language }) {
       )}
       
       {isRecording && (
-        <button onClick={stopRecording} className="stop-btn">
-          ⏹️ Stop Recording
-        </button>
+        <>
+          <button onClick={stopRecording} className="stop-btn">
+            ⏹️ Stop Recording
+          </button>
+          <div className="waveform-container">
+            <div className="waveform-bars">
+              {[...Array(20)].map((_, i) => {
+                const barHeight = Math.max(10, audioLevel * (0.3 + Math.random() * 0.7));
+                return (
+                  <div
+                    key={i}
+                    className="waveform-bar"
+                    style={{
+                      height: `${barHeight}%`,
+                      animationDelay: `${i * 0.05}s`
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+              Audio level: {Math.round(audioLevel)}%
+            </div>
+          </div>
+        </>
       )}
 
       {isProcessing && (

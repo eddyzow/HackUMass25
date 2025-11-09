@@ -10,6 +10,7 @@ class SpeechService {
   }
 
   async transcribeAudio(audioFilePath, language = 'zh-CN') {
+    console.log(`🎤 Transcribing audio: ${audioFilePath}, language: ${language}`);
     this.speechConfig.speechRecognitionLanguage = language;
     
     const audioConfig = sdk.AudioConfig.fromWavFileInput(
@@ -24,17 +25,24 @@ class SpeechService {
     return new Promise((resolve, reject) => {
       recognizer.recognizeOnceAsync(
         result => {
+          console.log(`📝 Recognition result reason: ${result.reason}`);
           if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+            console.log(`✅ Transcribed text: "${result.text}"`);
             resolve({
               text: result.text,
               confidence: 0.95
             });
+          } else if (result.reason === sdk.ResultReason.NoMatch) {
+            console.error('❌ Speech not recognized - no match found');
+            reject(new Error('Speech not recognized - no match found'));
           } else {
-            reject(new Error('Speech not recognized'));
+            console.error(`❌ Recognition failed with reason: ${result.reason}`);
+            reject(new Error(`Speech recognition failed: ${result.reason}`));
           }
           recognizer.close();
         },
         error => {
+          console.error('❌ Azure Speech API Error:', error);
           recognizer.close();
           reject(error);
         }
@@ -43,12 +51,16 @@ class SpeechService {
   }
 
   async getPronunciationAssessment(audioFilePath, referenceText, language) {
+    console.log(`📊 Assessing pronunciation for: "${referenceText}"`);
     const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
       referenceText,
       sdk.PronunciationAssessmentGradingSystem.HundredMark,
       sdk.PronunciationAssessmentGranularity.Phoneme,
-      true
+      true // Enable miscue
     );
+
+    // Enable word-level timing and prosody assessment
+    pronunciationConfig.enableProsodyAssessment = true;
 
     this.speechConfig.speechRecognitionLanguage = language;
     const audioConfig = sdk.AudioConfig.fromWavFileInput(
@@ -68,16 +80,21 @@ class SpeechService {
           const pronunciationResult = 
             sdk.PronunciationAssessmentResult.fromResult(result);
           
+          console.log(`✅ Pronunciation score: ${pronunciationResult.pronunciationScore}`);
+          console.log(`📊 Full assessment:`, JSON.stringify(pronunciationResult.detailResult, null, 2));
+          
           resolve({
             accuracyScore: pronunciationResult.accuracyScore,
             fluencyScore: pronunciationResult.fluencyScore,
             completenessScore: pronunciationResult.completenessScore,
             pronunciationScore: pronunciationResult.pronunciationScore,
-            words: pronunciationResult.detailResult?.Words || []
+            words: pronunciationResult.detailResult?.Words || [],
+            prosody: pronunciationResult.detailResult?.ProsodyScore || null
           });
           recognizer.close();
         },
         error => {
+          console.error('❌ Pronunciation assessment error:', error);
           recognizer.close();
           reject(error);
         }
