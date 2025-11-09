@@ -1,122 +1,147 @@
-# 🚀 QUICK START - Get Running in 10 Minutes
+# 🌊 SpeakFlow - Quick Start Guide
 
-## Step 1: Install Dependencies (3 mins)
+## What is SpeakFlow?
 
+SpeakFlow is a **clean, simple language learning assistant** focused on helping you practice Chinese pronunciation through voice conversations.
+
+## What's New?
+
+✨ **Completely redesigned** to be simpler, lighter, and more pleasant to use!
+
+- **Full width conversation** - More space for your messages
+- **Clean interface** - No clutter, just the essentials
+- **Beautiful gradient** - Calming purple-to-violet background
+- **Named SpeakFlow** - Fresh branding with 🌊 wave emoji
+
+## Running the App
+
+### 1. Start Backend
 ```bash
-# Backend
 cd backend
-npm install
-
-# Frontend (in new terminal)
-cd frontend
-npm install
+npm start
 ```
 
-## Step 2: Set Up MongoDB Atlas (3 mins)
-
-1. Go to: https://mongodb.com/cloud/atlas
-2. Sign up (FREE)
-3. Create cluster → M0 Free
-4. Database Access → Add User (remember password!)
-5. Network Access → Add IP → `0.0.0.0/0`
-6. Clusters → Connect → "Connect your application"
-7. Copy connection string
-
-## Step 3: Set Up Azure Speech (3 mins)
-
-1. Go to: https://portal.azure.com
-2. Create account
-3. Search: "Speech Services"
-4. Create → Free F0 tier
-5. After created → Keys and Endpoint
-6. Copy Key 1 and Region
-
-## Step 4: Configure Environment Variables (1 min)
-
-Create `backend/.env`:
-```env
-MONGODB_URI=mongodb+srv://YOUR_USER:YOUR_PASS@cluster0.xxxxx.mongodb.net/language-learning
-AZURE_SPEECH_KEY=your_key_here
-AZURE_SPEECH_REGION=eastus
-PORT=5000
-```
-
-## Step 5: Start Servers (1 min)
-
+### 2. Start Frontend (in new terminal)
 ```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev
-
-# Terminal 2 - Frontend  
 cd frontend
 npm run dev
 ```
 
-## Step 6: Test! 🎉
+### 3. Open in Browser
+Go to: **http://localhost:5173**
 
-1. Open http://localhost:5173
-2. Allow microphone
-3. Click "Start Recording"
-4. Say "你好" or "Hello"
-5. Click "Stop"
-6. See feedback!
+## Using SpeakFlow
+
+1. **Click the Record button** (purple circle)
+2. **Speak in Chinese** (Mandarin)
+3. **Click Stop** when done
+4. **View your results**:
+   - See your message transcribed
+   - Get pronunciation feedback
+   - View phoneme-by-phoneme analysis
+   - Read the bot's response
+
+## Features
+
+### 💬 Conversation
+- Full width chat area
+- User messages (purple gradient)
+- Bot responses (light gray)
+- Clean, readable layout
+
+### 🎤 Voice Recording
+- 120px circular button
+- Visual waveform feedback
+- Simple recording interface
+- Processing indicator
+
+### 📊 Pronunciation Analysis
+- Word-by-word scores
+- Phoneme breakdown
+- Color-coded feedback:
+  - 🟢 Green (80%+): Great!
+  - 🟡 Yellow (60-79%): Good
+  - 🔴 Red (<60%): Needs work
+
+### 🌐 Translation
+- Click "Show Translation" on Chinese text
+- Instant English translation
+- Toggle on/off
+
+## Keyboard Shortcuts
+
+- **Space**: Start/stop recording (when button focused)
+- **Enter**: Confirm actions
+- **Esc**: Close modals
+
+## Tips for Best Results
+
+✅ **Speak clearly** at a natural pace
+✅ **Keep consistent volume** not too loud or soft
+✅ **Practice regularly** for best improvement
+✅ **Use quiet environment** for better recognition
+
+## Troubleshooting
+
+### No microphone access?
+- Check browser permissions
+- Allow microphone access when prompted
+- Check system settings
+
+### Backend not connecting?
+- Make sure backend is running (port 5001)
+- Check `.env` file has correct API keys
+- Look for errors in backend terminal
+
+### Audio not recording?
+- Refresh the page
+- Check microphone is working in other apps
+- Try a different browser (Chrome recommended)
+
+## Project Structure
+
+```
+SpeakFlow/
+├── backend/          Backend server (Node.js)
+│   ├── routes/       API endpoints
+│   ├── services/     AI services (Azure, Gemini)
+│   └── models/       Database models
+└── frontend/         React frontend
+    ├── src/
+    │   ├── App.jsx           Main app
+    │   ├── App.css           Styles
+    │   └── components/       UI components
+    └── index.html
+```
+
+## Tech Stack
+
+- **Frontend**: React + Vite
+- **Backend**: Node.js + Express
+- **Voice**: Azure Speech Services
+- **AI**: Google Gemini
+- **Database**: MongoDB
+
+## Current Language
+
+🇨🇳 **Chinese (Mandarin)**
+
+More languages coming soon!
+
+## Support
+
+Having issues? Check:
+1. Backend terminal for errors
+2. Frontend terminal for build issues
+3. Browser console (F12) for client errors
+
+## Next Steps
+
+- Practice speaking Chinese
+- Review pronunciation feedback
+- Improve your scores
+- Have conversations!
 
 ---
 
-## ⚡ Super Quick Setup (if you have accounts)
-
-```bash
-# 1. Set environment variables
-cd backend
-cp .env.example .env
-# Edit .env with your credentials
-
-# 2. Install everything
-npm install
-cd ../frontend
-npm install
-
-# 3. Start both (in separate terminals)
-cd ../backend && npm run dev
-cd ../frontend && npm run dev
-```
-
----
-
-## 🆘 Common Quick Fixes
-
-**"Can't connect to MongoDB"**
-```bash
-# Check your .env file has correct connection string
-# Make sure you whitelisted 0.0.0.0/0 in Atlas
-```
-
-**"Azure Speech error"**
-```bash
-# Verify your key and region in .env
-# Check you're on Free tier (5 hours/month limit)
-```
-
-**"Microphone not working"**
-```bash
-# Use Chrome browser
-# Allow microphone when prompted
-# Make sure you're on localhost or HTTPS
-```
-
----
-
-## 📱 Test It Works
-
-**Mandarin:**
-- Say: "你好" (nǐ hǎo)
-- Expected: Score ~70-100%
-
-**English:**
-- Say: "Hello, how are you?"
-- Expected: Score ~70-100%
-
----
-
-**You're ready to code! 加油！🚀**
+**Start speaking and let the conversation flow!** 🌊

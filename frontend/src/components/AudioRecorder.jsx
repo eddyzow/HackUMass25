@@ -5,14 +5,22 @@ function AudioRecorder({ onRecordingComplete, language }) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [error, setError] = useState(null);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const animationRef = useRef(null);
   const analyserRef = useRef(null);
 
   const startRecording = async () => {
+    setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
       streamRef.current = stream;
 
       // Set up audio visualization
@@ -50,7 +58,16 @@ function AudioRecorder({ onRecordingComplete, language }) {
       console.log('🎤 Recording started with audio visualization');
     } catch (error) {
       console.error('Error accessing microphone:', error);
-      alert('Please allow microphone access');
+      setError('Cannot access microphone. Please allow microphone permissions.');
+      
+      // Provide more specific error messages
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setError('Microphone access denied. Please allow microphone permissions in your browser settings.');
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        setError('No microphone found. Please connect a microphone and try again.');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        setError('Microphone is already in use by another application.');
+      }
     }
   };
 
@@ -66,16 +83,29 @@ function AudioRecorder({ onRecordingComplete, language }) {
       cancelAnimationFrame(animationRef.current);
     }
 
-    recorderRef.current.stopRecording(() => {
-      const blob = recorderRef.current.getBlob();
-      
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+    try {
+      recorderRef.current.stopRecording(() => {
+        const blob = recorderRef.current.getBlob();
+        
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
 
-      onRecordingComplete(blob);
+        // Check if blob is valid
+        if (!blob || blob.size === 0) {
+          setError('Recording failed. Please try again.');
+          setIsProcessing(false);
+          return;
+        }
+
+        onRecordingComplete(blob);
+        setIsProcessing(false);
+      });
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      setError('Failed to process recording. Please try again.');
       setIsProcessing(false);
-    });
+    }
   };
 
   useEffect(() => {
@@ -88,6 +118,12 @@ function AudioRecorder({ onRecordingComplete, language }) {
 
   return (
     <div className="audio-recorder">
+      {error && (
+        <div className="recorder-error">
+          ⚠️ {error}
+        </div>
+      )}
+      
       {!isRecording && !isProcessing && (
         <button onClick={startRecording} className="record-btn">
           🎤 Start Recording
@@ -100,31 +136,38 @@ function AudioRecorder({ onRecordingComplete, language }) {
             ⏹️ Stop Recording
           </button>
           <div className="waveform-container">
-            <div className="waveform-bars">
-              {[...Array(20)].map((_, i) => {
-                // Create more dramatic height variations based on audio level
-                const baseHeight = 10;
-                const randomVariation = Math.random() * 0.6 + 0.4; // 0.4 to 1.0
-                const audioMultiplier = audioLevel / 100;
-                const vibration = Math.random() * 20 * audioMultiplier; // Random vibration when loud
-                const barHeight = baseHeight + (audioLevel * randomVariation) + vibration;
-                
+            <div className="audio-level-indicator">
+              <div className="level-label">Audio Level:</div>
+              <div className="level-bars">
+                {[...Array(10)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`level-bar ${audioLevel > (i + 1) * 10 ? 'active' : ''}`}
+                  />
+                ))}
+              </div>
+              <div className="level-percentage">{Math.round(audioLevel)}%</div>
+            </div>
+            <div className="waveform-visualizer">
+              {[...Array(30)].map((_, i) => {
+                const barHeight = 20 + (audioLevel * Math.random() * 0.8);
                 return (
                   <div
                     key={i}
-                    className="waveform-bar"
+                    className="wave-bar"
                     style={{
-                      height: `${Math.min(95, barHeight)}%`,
-                      animationDelay: `${i * 0.05}s`,
-                      animationDuration: `${0.3 + Math.random() * 0.4}s` // Vary animation speed
+                      height: `${Math.min(100, barHeight)}%`,
+                      opacity: audioLevel > 5 ? 1 : 0.3
                     }}
                   />
                 );
               })}
             </div>
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-              Audio level: {Math.round(audioLevel)}%
-            </div>
+            {audioLevel < 10 && (
+              <div className="low-audio-warning">
+                ⚠️ Speak louder - audio level is low
+              </div>
+            )}
           </div>
         </>
       )}

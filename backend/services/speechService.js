@@ -33,8 +33,13 @@ class SpeechService {
               confidence: 0.95
             });
           } else if (result.reason === sdk.ResultReason.NoMatch) {
-            console.error('❌ Speech not recognized - no match found');
-            reject(new Error('Speech not recognized - no match found'));
+            console.log('⚠️  No speech detected or speech not clear enough');
+            // Return a specific error object that the route can handle gracefully
+            resolve({
+              text: null,
+              noSpeechDetected: true,
+              message: 'No speech detected'
+            });
           } else {
             console.error(`❌ Recognition failed with reason: ${result.reason}`);
             reject(new Error(`Speech recognition failed: ${result.reason}`));

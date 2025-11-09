@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
+import { translateText } from '../services/api';
 
 function ChatInterface({ messages }) {
   const messagesEndRef = useRef(null);
   const [activePhoneme, setActivePhoneme] = useState(null); // {messageIndex, wordIndex, phonemeIndex}
   const audioRefs = useRef({});
+  const [showTranslation, setShowTranslation] = useState({}); // {messageIndex: boolean}
+  const [translations, setTranslations] = useState({}); // {messageIndex: translation}
+  const [loadingTranslation, setLoadingTranslation] = useState({}); // {messageIndex: boolean}
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -12,6 +16,34 @@ function ChatInterface({ messages }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const toggleTranslation = async (messageIndex) => {
+    const isShowing = !showTranslation[messageIndex];
+    setShowTranslation(prev => ({
+      ...prev,
+      [messageIndex]: isShowing
+    }));
+
+    // Fetch translation if showing and not already loaded
+    if (isShowing && !translations[messageIndex] && !messages[messageIndex].translation) {
+      setLoadingTranslation(prev => ({ ...prev, [messageIndex]: true }));
+      try {
+        const result = await translateText(messages[messageIndex].text);
+        setTranslations(prev => ({
+          ...prev,
+          [messageIndex]: result.translation
+        }));
+      } catch (error) {
+        console.error('Failed to fetch translation:', error);
+        setTranslations(prev => ({
+          ...prev,
+          [messageIndex]: `[Translation unavailable]`
+        }));
+      } finally {
+        setLoadingTranslation(prev => ({ ...prev, [messageIndex]: false }));
+      }
+    }
+  };
 
   const handleAudioTimeUpdate = (messageIndex, phonemesData) => {
     const audio = audioRefs.current[messageIndex];
@@ -68,6 +100,26 @@ function ChatInterface({ messages }) {
           <div key={index} className={`message ${msg.role} ${msg.isError ? 'message-error' : ''}`}>
             <div className="message-content">
               <div className="message-text">{msg.text}</div>
+              
+              {/* Translation toggle for Chinese bot messages */}
+              {msg.role === 'bot' && msg.text && /[\u4e00-\u9fa5]/.test(msg.text) && (
+                <button 
+                  className="translation-toggle"
+                  onClick={() => toggleTranslation(index)}
+                >
+                  {showTranslation[index] ? '🔽 Hide Translation' : '🌐 Show Translation'}
+                </button>
+              )}
+              
+              {showTranslation[index] && msg.role === 'bot' && (
+                <div className="translation-box">
+                  {loadingTranslation[index] ? (
+                    <em>Loading translation...</em>
+                  ) : (
+                    <em>{msg.translation || translations[index] || 'Translation not available'}</em>
+                  )}
+                </div>
+              )}
               
               {msg.suggestions && msg.suggestions.length > 0 && (
                 <div className="error-suggestions">

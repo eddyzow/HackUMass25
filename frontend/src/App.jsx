@@ -7,10 +7,9 @@ import './App.css';
 
 function App() {
   const [sessionId] = useState(() => `session-${Date.now()}`);
-  const [language, setLanguage] = useState('zh-CN');
+  const [language] = useState('zh-CN');  // Always Chinese
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState('conversation'); // 'conversation' or 'feedback'
 
   useEffect(() => {
     const loadConversation = async () => {
@@ -28,7 +27,7 @@ function App() {
     setIsLoading(true);
     
     try {
-      const result = await processAudio(audioBlob, sessionId, language, mode);
+      const result = await processAudio(audioBlob, sessionId, language);
       
       console.log('📊 Full API response:', result);
       
@@ -70,66 +69,106 @@ function App() {
   };
 
   const handleLanguageChange = (newLanguage) => {
-    if (messages.length > 0) {
-      const confirm = window.confirm('Changing language will start a new conversation. Continue?');
-      if (!confirm) return;
-    }
-    setLanguage(newLanguage);
-    setMessages([]);
+    // No language change - always Chinese
+    return;
   };
+
+  const [showAbout, setShowAbout] = useState(false);
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🗣️ AI Language Learning Assistant</h1>
-        <div className="header-controls">
-          <div className="mode-selector">
-            <button 
-              className={`mode-btn ${mode === 'conversation' ? 'active' : ''}`}
-              onClick={() => setMode('conversation')}
-            >
-              💬 Conversation
-            </button>
-            <button 
-              className={`mode-btn ${mode === 'feedback' ? 'active' : ''}`}
-              onClick={() => setMode('feedback')}
-            >
-              📊 Feedback
-            </button>
+        <div className="brand">
+          <div className="logo">
+            <span className="logo-icon">🌊</span>
+            <h1>SpeakFlow</h1>
           </div>
-          <LanguageSelector 
-            currentLanguage={language}
-            onLanguageChange={handleLanguageChange}
-          />
+          <div className="header-actions">
+            <button 
+              className="about-btn"
+              onClick={() => setShowAbout(!showAbout)}
+            >
+              ℹ️ About
+            </button>
+            <div className="language-selector">
+              <span className="current-lang">🇨🇳 Chinese</span>
+              <span className="more-coming">More languages coming soon</span>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div className="mode-description">
-        {mode === 'conversation' ? (
-          <p>💬 <strong>Conversation Mode:</strong> Have a natural conversation! The AI responds contextually with brief feedback.</p>
-        ) : (
-          <p>📊 <strong>Feedback Mode:</strong> Get detailed pronunciation analysis with comprehensive feedback on every word and phoneme.</p>
-        )}
-      </div>
-
-      <div className="main-content">
-        <div className="chat-section">
-          <ChatInterface messages={messages} />
-          
-          <div className="recorder-section">
-            <AudioRecorder 
-              onRecordingComplete={handleRecordingComplete}
-              language={language}
-              mode={mode}
-            />
-            {isLoading && <div className="loading">🎵 Processing your speech...</div>}
+      {showAbout && (
+        <div className="about-modal" onClick={() => setShowAbout(false)}>
+          <div className="about-content" onClick={(e) => e.stopPropagation()}>
+            <button className="close-btn" onClick={() => setShowAbout(false)}>✕</button>
+            <h2>🌊 About SpeakFlow</h2>
+            <div className="about-section">
+              <h3>What is SpeakFlow?</h3>
+              <p>
+                SpeakFlow is an AI-powered language learning assistant that helps you practice 
+                and improve your pronunciation through natural conversations. Using advanced 
+                speech recognition and AI technology, we provide real-time feedback on your 
+                pronunciation, helping you speak more fluently and confidently.
+              </p>
+            </div>
+            <div className="about-section">
+              <h3>How It Works</h3>
+              <ol>
+                <li><strong>Record:</strong> Click the microphone button and speak in Chinese</li>
+                <li><strong>Analyze:</strong> Our AI transcribes your speech and analyzes pronunciation</li>
+                <li><strong>Learn:</strong> Get detailed feedback on each word and phoneme</li>
+                <li><strong>Practice:</strong> Continue the conversation and improve!</li>
+              </ol>
+            </div>
+            <div className="about-section">
+              <h3>Features</h3>
+              <ul>
+                <li>🎤 Real-time voice recording and transcription</li>
+                <li>📊 Detailed pronunciation analysis</li>
+                <li>🤖 AI-powered conversational responses</li>
+                <li>🌐 Instant translation for Chinese text</li>
+                <li>📈 Word-by-word and phoneme-level feedback</li>
+                <li>🎯 Color-coded scoring (Green 80%+, Yellow 60-79%, Red &lt;60%)</li>
+              </ul>
+            </div>
+            <div className="about-section">
+              <h3>Technology Stack</h3>
+              <p>
+                <strong>Speech Recognition:</strong> Microsoft Azure Speech Services<br/>
+                <strong>AI Conversations:</strong> Google Gemini AI<br/>
+                <strong>Frontend:</strong> React + Vite<br/>
+                <strong>Backend:</strong> Node.js + Express
+              </p>
+            </div>
+            <div className="about-section">
+              <h3>Currently Supported</h3>
+              <p>
+                🇨🇳 <strong>Mandarin Chinese</strong> - Full support with pronunciation assessment
+              </p>
+              <p className="coming-soon-text">
+                Coming soon: Spanish, French, Japanese, German, and more!
+              </p>
+            </div>
+            <div className="about-footer">
+              <p>Made with ❤️ for language learners everywhere</p>
+              <p className="version">Version 1.0.0</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <footer className="app-footer">
-        <p>Session ID: {sessionId}</p>
-      </footer>
+      <main className="main-container">
+        <ChatInterface messages={messages} />
+        
+        <div className="recorder-container">
+          <AudioRecorder 
+            onRecordingComplete={handleRecordingComplete}
+            language={language}
+          />
+          {isLoading && <div className="loading">Processing...</div>}
+        </div>
+      </main>
     </div>
   );
 }

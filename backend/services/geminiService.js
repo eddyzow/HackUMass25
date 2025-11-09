@@ -53,62 +53,77 @@ class GeminiService {
       fluency: Math.round(assessment.fluencyScore || 0)
     };
 
-    // Build conversation context
-    const historyContext = conversationHistory.length > 0 
-      ? `\n\nPrevious conversation:\n${conversationHistory.slice(-5).map(msg => 
-          `${msg.role === 'user' ? 'Student' : 'You'}: ${msg.text}`
-        ).join('\n')}`
-      : '';
+    // Build conversation context - include MORE history for better context
+    let historyContext = '';
+    if (conversationHistory.length > 0) {
+      const recentMessages = conversationHistory.slice(-8); // Last 8 messages (4 exchanges)
+      historyContext = '\n\nCONVERSATION HISTORY (remember this context):';
+      recentMessages.forEach((msg, idx) => {
+        const speaker = msg.role === 'user' ? 'Student' : 'You (AI Tutor)';
+        historyContext += `\n${speaker}: "${msg.text}"`;
+      });
+      historyContext += '\n\nUse this history to maintain context and build on previous topics.';
+    }
 
     if (mode === 'conversation') {
-      // Conversation mode: Natural dialogue with brief feedback
-      return `You are a friendly, helpful language learning tutor having a natural conversation in ${isChineseLearning ? 'Mandarin Chinese' : 'English'}.
+      // Chinese-only conversational feedback mode
+      return `You are a Chinese language tutor providing feedback and having conversations ONLY in Mandarin Chinese.
 
-The student is practicing ${isChineseLearning ? 'Chinese' : 'English'} and said: "${userMessage}"
+The student is learning Chinese and just said: "${userMessage}"
 
-Their pronunciation score: ${scores.pronunciation}%
+Pronunciation metrics:
+- Overall pronunciation: ${scores.pronunciation}%
+- Accuracy: ${scores.accuracy}%
+- Fluency: ${scores.fluency}%${historyContext}
 
-IMPORTANT INSTRUCTIONS FOR CONVERSATION MODE:
-1. Respond to the ACTUAL CONTENT of what they said
-2. Answer their questions, engage with their topics
-3. If they ask for help (math, advice, etc.), help them!
-4. If they make a statement, respond naturally and ask follow-up questions
-5. ONLY mention pronunciation if it's below 60% - and keep it very brief
-6. Keep total response under 2-3 sentences
-7. ${isChineseLearning ? 'You can mix Chinese and English naturally to help them learn' : 'Use clear, simple English'}
-8. Be helpful, warm, and conversational - like a real conversation partner
+CRITICAL INSTRUCTIONS:
+1. Respond COMPLETELY in Chinese (汉字) - NO English at all
+2. READ conversation history for context
+3. Provide brief feedback on their Chinese:
+   - Pronunciation quality (发音)
+   - Grammar if there are issues (语法)
+   - Tone accuracy (声调)
+   - Overall score impression
+4. Continue the conversation naturally
+5. Answer their questions in Chinese
+6. Keep response under 3 sentences
+7. Be encouraging and helpful
+
+Scoring guidelines:
+- 85%+: Excellent! Praise them (太棒了！非常好！)
+- 70-85%: Good! Note what to improve (不错！注意...)
+- 60-70%: OK, needs work (还可以，需要...)
+- <60%: Encourage more practice (需要多练习...)
 
 Examples:
-- Student: "I need help with my math homework, 1+1?"
-  Good: "Sure! 1 + 1 equals 2. 这很简单！(That's simple!) Do you have more math questions?"
-  Bad: "That's interesting! Tell me more."
+- Student (poor pronunciation): "你好"
+  Response: "你的发音需要改进。'你好'的声调要注意，第一个是第三声，第二个是第三声。多练习！"
 
-- Student: "I like to play basketball"
-  Good: "Basketball is fun! 🏀 What position do you play? Do you have a favorite team?"
-  Bad: "Good pronunciation! You said basketball correctly."
+- Student (good): "我喜欢学中文"
+  Response: "说得很好！发音很清楚，声调也准确。你为什么喜欢学中文呢？"
 
-- Student: "What's the weather like?"
-  Good: "I can't check the weather, but it's a good question! What's the weather like where you are?"
-  Bad: "Tell me more about that."
+- Student asks: "一加一等于多少？"
+  Response: "一加一等于二。你的发音不错！你在学数学吗？"
 
-Respond naturally to their actual message:`;
+Respond in pure Chinese with brief feedback and conversation:`;
     } else {
       // Feedback mode: Detailed analysis
       return `You are an encouraging, patient language learning tutor specializing in ${isChineseLearning ? 'Mandarin Chinese' : 'English'}.
 
-Current situation:
-- Student said: "${userMessage}"
-- Language learning: ${isChineseLearning ? 'Mandarin Chinese (中文)' : 'English'}
-- Pronunciation score: ${scores.pronunciation}%
-- Accuracy score: ${scores.accuracy}%
-- Fluency score: ${scores.fluency}%${historyContext}
+The student just said: "${userMessage}"
+
+Language learning: ${isChineseLearning ? 'Mandarin Chinese (中文)' : 'English'}
+Pronunciation score: ${scores.pronunciation}%
+Accuracy score: ${scores.accuracy}%
+Fluency score: ${scores.fluency}%${historyContext}
 
 Your role in FEEDBACK MODE:
-1. Provide encouraging, detailed feedback based on pronunciation scores
-2. Point out specific strengths and areas for improvement
-3. ${isChineseLearning ? 'Comment on tone accuracy for Chinese' : 'Comment on vowel/consonant clarity'}
-4. Keep responses under 3 sentences
-5. Be constructive and specific
+1. Consider the conversation history above for context
+2. Provide encouraging, detailed feedback based on pronunciation scores
+3. Point out specific strengths and areas for improvement
+4. ${isChineseLearning ? 'Comment on tone accuracy for Chinese' : 'Comment on vowel/consonant clarity'}
+5. Keep responses under 3 sentences
+6. Be constructive and specific
 
 Guidelines:
 - ${scores.pronunciation >= 85 ? 'Celebrate their excellent pronunciation!' : ''}
@@ -126,39 +141,39 @@ Respond with detailed feedback:`;
     console.log(`⚠️  Using fallback response (Gemini not available)`);
     
     if (mode === 'conversation') {
-      // Conversation mode: Try to be somewhat contextual even without Gemini
+      // Conversation mode fallback: Try to be contextual
       const lowerMessage = userMessage.toLowerCase();
       
       // Check for common patterns
       if (lowerMessage.includes('help') || lowerMessage.includes('?')) {
         if (language === 'zh-CN') {
-          return `当然可以帮你！(Of course I can help!) What specific help do you need? Keep practicing your Chinese! 加油！`;
+          return `当然可以帮你！你需要什么具体的帮助？继续练习中文！加油！`;
         } else {
           return `I'd love to help! Could you tell me more about what you need? Your pronunciation is getting better!`;
         }
       } else if (lowerMessage.includes('like') || lowerMessage.includes('love')) {
         if (language === 'zh-CN') {
-          return `很有意思！Tell me more - what else do you enjoy? 你还喜欢什么？`;
+          return `很有意思！告诉我更多 - 你还喜欢什么？`;
         } else {
           return `That sounds great! What else do you enjoy doing?`;
         }
       } else {
         // Generic conversational response
         if (language === 'zh-CN') {
-          return `有意思！Tell me more about that. 你能详细说说吗？`;
+          return `有意思！告诉我更多关于这个的事情。你能详细说说吗？`;
         } else {
           return `Interesting! Can you tell me more about "${userMessage}"?`;
         }
       }
     } else {
-      // Feedback mode: Detailed feedback
+      // Feedback mode: Detailed feedback (Chinese only for zh-CN)
       if (language === 'zh-CN') {
         if (score >= 85) {
-          return `太棒了！"${userMessage}" 的发音非常好 (${Math.round(score)}%)! Your tones are clear. What would you like to practice next?`;
+          return `太棒了！你的发音非常好（${Math.round(score)}%）！声调很清楚。你想练习什么？`;
         } else if (score >= 70) {
-          return `不错！"${userMessage}" is pretty good (${Math.round(score)}%). Focus on your tone accuracy and try again!`;
+          return `不错！发音还不错（${Math.round(score)}%）。注意声调的准确性，再试一次！`;
         } else {
-          return `好的！I heard "${userMessage}". Let's work on clarity - try speaking more slowly and focus on each tone. 加油！`;
+          return `好的！我听到了。让我们提高清晰度 - 试着说慢一点，注意每个声调。加油！`;
         }
       } else {
         if (score >= 85) {
@@ -200,6 +215,34 @@ Keep it encouraging and practical.`;
     } catch (error) {
       console.error('❌ Gemini evaluation error:', error.message);
       return this.getBasicEvaluation(assessment);
+    }
+  }
+
+  async translateText(chineseText) {
+    if (!this.genAI) {
+      return `[Translation: ${chineseText}]`;
+    }
+
+    try {
+      const prompt = `Translate this Chinese text to English. Provide ONLY the English translation, nothing else. No explanations, no formatting, just the translation:
+
+"${chineseText}"`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      let translation = response.text().trim();
+      
+      // Remove any quotes or extra formatting
+      translation = translation.replace(/^["']|["']$/g, '');
+      
+      // Remove common prefixes that might appear
+      translation = translation.replace(/^(English translation:|Translation:|English:)\s*/i, '');
+      
+      console.log(`🌐 Translated: "${chineseText}" → "${translation}"`);
+      return translation;
+    } catch (error) {
+      console.error('❌ Translation error:', error.message);
+      return `[Translation: ${chineseText}]`;
     }
   }
 

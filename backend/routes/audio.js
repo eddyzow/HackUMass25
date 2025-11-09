@@ -62,6 +62,36 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       language
     );
 
+    // Check if no speech was detected
+    if (transcription.noSpeechDetected) {
+      console.log('⚠️  No speech detected in audio, returning user-friendly message');
+      
+      // Get existing conversation
+      let conversation = await Conversation.findOne({ sessionId });
+      
+      return res.json({
+        error: true,
+        noSpeechDetected: true,
+        userFriendlyMessage: language === 'zh-CN' 
+          ? '没有检测到语音。请再试一次，说得更清楚一些。'
+          : 'No speech detected. Please try again and speak more clearly.',
+        suggestions: language === 'zh-CN'
+          ? [
+              '靠近麦克风说话',
+              '确保环境安静',
+              '说话要清楚、声音要大一些',
+              '尝试说"你好"或"谢谢"'
+            ]
+          : [
+              'Speak closer to the microphone',
+              'Reduce background noise',
+              'Speak louder and more clearly',
+              'Try saying "Hello" or "Thank you"'
+            ],
+        conversation: conversation?.messages || []
+      });
+    }
+
     // 2. Get pronunciation assessment
     const assessment = await speechService.getPronunciationAssessment(
       audioFile.path,
@@ -86,17 +116,33 @@ router.post('/process', upload.single('audio'), async (req, res) => {
     // 4. Get conversation history for context
     let conversation = await Conversation.findOne({ sessionId });
     const conversationHistory = conversation?.messages || [];
+    
+    console.log(`💬 Conversation history: ${conversationHistory.length} messages`);
+    if (conversationHistory.length > 0) {
+      console.log(`   Last 3 messages:`, conversationHistory.slice(-3).map(m => ({
+        role: m.role,
+        text: m.text.substring(0, 50) + '...'
+      })));
+    }
 
-    // 5. Generate bot response using Gemini AI (qualitative)
+    // 5. Generate bot response using Gemini AI - Chinese feedback only
     const botResponse = await geminiService.generateConversationResponse(
       transcription.text,
       assessment,
       language,
       conversationHistory,
-      mode  // Pass mode to Gemini
+      mode
     );
+    
+    // 6. Generate translation for Chinese responses
+    let translation = null;
+    if (language === 'zh-CN' && botResponse) {
+      translation = await geminiService.translateText(botResponse);
+      console.log(`📝 Bot response (Chinese): ${botResponse}`);
+      console.log(`📝 Translation (English): ${translation}`);
+    }
 
-    // 6. Generate qualitative evaluation using Gemini (only in feedback mode)
+    // 7. Generate qualitative evaluation using Gemini (only in feedback mode)
     let qualitativeEvaluation = null;
     if (mode === 'feedback') {
       qualitativeEvaluation = await geminiService.evaluateQualitativeResponse(
@@ -130,7 +176,8 @@ router.post('/process', upload.single('audio'), async (req, res) => {
 
     conversation.messages.push({
       role: 'bot',
-      text: botResponse
+      text: botResponse,
+      translation: translation
     });
 
     conversation.updatedAt = new Date();
@@ -152,17 +199,18 @@ router.post('/process', upload.single('audio'), async (req, res) => {
     console.log('✅ Request completed successfully\n');
 
   } catch (error) {
-    console.error('\n❌ ========== ERROR ==========');
+    console.error('\n⚠️  ========== REQUEST FAILED ==========');
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
-    console.error('=============================\n');
+    console.error('======================================\n');
     
-    // Send error response to frontend instead of crashing
-    res.status(400).json({ 
+    // Send user-friendly error response to frontend
+    res.json({ 
       error: true,
       message: error.message,
-      userFriendlyMessage: getUserFriendlyErrorMessage(error.message, language || 'en-US'),
-      suggestions: getErrorSuggestions(error.message, language || 'en-US')
+      userFriendlyMessage: getUserFriendlyErrorMessage(error.message, language || 'zh-CN'),
+      suggestions: getErrorSuggestions(error.message, language || 'zh-CN'),
+      conversation: conversation?.messages || []
     });
   }
 });
@@ -317,6 +365,22 @@ router.get('/conversation/:sessionId', async (req, res) => {
     res.json(conversation);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch conversation' });
+  }
+});
+
+router.post('/translate', async (req, res) => {
+  try {
+    const { text } = req.body;
+    
+    if (!text) {
+      return res.status(400).json({ error: 'No text provided' });
+    }
+
+    const translation = await geminiService.translateText(text);
+    res.json({ translation });
+  } catch (error) {
+    console.error('Translation error:', error);
+    res.status(500).json({ error: 'Translation failed', translation: `[Translation: ${text}]` });
   }
 });
 
