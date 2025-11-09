@@ -147,7 +147,7 @@ function App() {
               <h3>Technology Stack</h3>
               <p>
                 <strong>Speech Recognition:</strong> Microsoft Azure Speech Services<br/>
-                <strong>AI Conversations:</strong> Google Gemini AI<br/>
+                <strong>AI Conversations:</strong> Claude AI<br/>
                 <strong>Frontend:</strong> React + Vite<br/>
                 <strong>Backend:</strong> Node.js + Express
               </p>
