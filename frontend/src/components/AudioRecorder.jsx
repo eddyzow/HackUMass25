@@ -8,6 +8,8 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [textInput, setTextInput] = useState('');
   const [isStopping, setIsStopping] = useState(false); // NEW: Prevent duplicate stops
+  const isStoppingRef = useRef(false); // Use ref for immediate synchronous check
+  const isRecordingRef = useRef(false); // Track recording state synchronously
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const animationRef = useRef(null);
@@ -18,6 +20,8 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
   const startRecording = async () => {
     setError(null);
     setIsStopping(false); // Reset stopping flag when starting new recording
+    isStoppingRef.current = false; // Reset ref too
+    isRecordingRef.current = true; // Set recording ref
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -68,7 +72,12 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
           const newTime = prev + 1;
           // Auto-stop at 15 seconds
           if (newTime >= maxRecordingTime) {
-            stopRecording();
+            // Clear interval FIRST to prevent repeated calls
+            if (recordingTimerRef.current) {
+              clearInterval(recordingTimerRef.current);
+              recordingTimerRef.current = null;
+            }
+            setTimeout(() => stopRecording(), 0);
           }
           return newTime;
         });
@@ -91,19 +100,36 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
   };
 
   const stopRecording = () => {
-    if (!recorderRef.current || isStopping) {
-      console.log('⚠️ Already stopping or no recorder, ignoring duplicate stop call');
+    const callId = Math.random().toString(36).substring(7);
+    console.log(`🛑 [${callId}] stopRecording called, isStopping=${isStopping}, isStoppingRef=${isStoppingRef.current}, isRecording=${isRecording}, isRecordingRef=${isRecordingRef.current}, recorderRef=${!!recorderRef.current}`);
+    
+    // Use ref for immediate synchronous check to prevent race conditions
+    if (isStoppingRef.current) {
+      console.log(`⚠️ [${callId}] Already stopping (via ref), ignoring duplicate stop call`);
+      return;
+    }
+    
+    if (!recorderRef.current) {
+      console.log(`⚠️ [${callId}] No recorder, ignoring stop call`);
+      return;
+    }
+    
+    if (!isRecordingRef.current) {
+      console.log(`⚠️ [${callId}] Not recording (via ref), ignoring stop call`);
       return;
     }
 
-    console.log('🛑 Stopping recording...');
+    console.log(`🛑 [${callId}] Proceeding with stop, setting isStopping=true`);
+    isStoppingRef.current = true; // Set ref immediately for synchronous check
+    isRecordingRef.current = false; // Clear recording ref
     setIsStopping(true); // Prevent duplicate stops
     setIsRecording(false);
     setAudioLevel(0);
     setRecordingTime(0);
 
-    // Clear recording timer
+    // Clear recording timer FIRST to prevent auto-stop from triggering again
     if (recordingTimerRef.current) {
+      console.log(`🛑 [${callId}] Clearing recording timer`);
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
@@ -115,6 +141,7 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
 
     try {
       recorderRef.current.stopRecording(async () => {
+        console.log(`✅ [${callId}] Recording stopped callback, getting blob...`);
         const blob = recorderRef.current.getBlob();
         
         if (streamRef.current) {
@@ -123,18 +150,26 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
 
         // Check if blob is valid
         if (!blob || blob.size === 0) {
+          console.error(`❌ [${callId}] Invalid blob`);
           setError('Recording failed. Please try again.');
+          isStoppingRef.current = false;
+          isRecordingRef.current = false;
           setIsStopping(false);
           return;
         }
 
-        console.log('✅ Recording stopped, processing...');
+        console.log(`✅ [${callId}] Blob valid, calling onRecordingComplete...`);
         await onRecordingComplete(blob);
+        console.log(`✅ [${callId}] onRecordingComplete finished, setting isStopping=false`);
+        isStoppingRef.current = false; // Reset ref
+        isRecordingRef.current = false; // Ensure recording ref is false
         setIsStopping(false); // Reset after processing
       });
     } catch (error) {
-      console.error('Error stopping recording:', error);
+      console.error(`❌ [${callId}] Error stopping recording:`, error);
       setError('Failed to process recording. Please try again.');
+      isStoppingRef.current = false; // Reset ref on error
+      isRecordingRef.current = false; // Ensure recording ref is false
       setIsStopping(false);
     }
   };
@@ -186,7 +221,7 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
             <span className="recording-text">Recording...</span>
             <span className="recording-timer-large">{recordingTime}s / {maxRecordingTime}s</span>
           </div>
-          <button onClick={stopRecording} className="stop-recording-btn">
+          <button onClick={stopRecording} className="stop-recording-btn" disabled={isStopping || isLoading}>
             ⏹️ Stop Recording
           </button>
         </div>
@@ -207,7 +242,7 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
             type="button"
             onClick={isRecording ? stopRecording : startRecording}
             className={`mic-button ${isRecording ? 'recording' : ''}`}
-            disabled={isLoading}
+            disabled={isLoading || isStopping}
             title={isRecording ? 'Stop recording' : 'Start recording'}
           >
             {isRecording ? '⏹️' : '🎤'}

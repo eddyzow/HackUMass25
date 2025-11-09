@@ -850,7 +850,7 @@ body {
   flex: 1;
   padding: 12px 16px;
   border: none;
-  background: transparent;
+  background: white; /* Changed from transparent to white */
   font-size: 15px;
   outline: none;
   color: #333;
@@ -861,10 +861,10 @@ body {
 }
 
 .chat-text-input:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: not-allowed;
-  background: #f0f0f0; /* Light gray instead of black */
-  color: #666; /* Darker text for disabled state */
+  background: #e8e8e8 !important; /* Light gray with !important to override */
+  color: #666 !important; /* Darker text with !important */
 }
 
 .mic-button {

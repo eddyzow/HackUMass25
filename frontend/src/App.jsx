@@ -24,18 +24,22 @@ function App() {
   }, [sessionId]);
 
   const handleRecordingComplete = async (audioBlob) => {
+    const callId = Math.random().toString(36).substring(7);
+    console.log(`📥 [${callId}] handleRecordingComplete called, isLoading=${isLoading}`);
+    
     // Prevent duplicate calls
     if (isLoading) {
-      console.log('⚠️ Already processing, ignoring duplicate call');
+      console.log(`⚠️ [${callId}] Already processing, ignoring duplicate call`);
       return;
     }
     
+    console.log(`📥 [${callId}] Proceeding, setting isLoading=true`);
     setIsLoading(true);
     
     try {
+      console.log(`📥 [${callId}] Calling processAudio...`);
       const result = await processAudio(audioBlob, sessionId, language);
-      
-      console.log('📊 Full API response:', result);
+      console.log(`📥 [${callId}] processAudio returned:`, result);
       
       // Check if there's an error in the response
       if (result.error) {
@@ -56,7 +60,7 @@ function App() {
         setMessages(result.conversation);
       }
     } catch (error) {
-      console.error('Error processing audio:', error);
+      console.error(`❌ [${callId}] Error processing audio:`, error);
       
       // Add error message to conversation
       setMessages(prevMessages => [
@@ -70,6 +74,7 @@ function App() {
         }
       ]);
     } finally {
+      console.log(`📥 [${callId}] Finally block, setting isLoading=false`);
       setIsLoading(false);
     }
   };
