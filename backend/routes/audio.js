@@ -4,8 +4,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const speechService = require('../services/speechService');
-const geminiService = require('../services/geminiService');
+const claudeService = require('../services/claudeService');
 const feedbackGenerator = require('../services/feedbackGenerator');
+const phonemeAnalyzer = require('../services/phonemeAnalyzer');
 const Conversation = require('../models/Conversation');
 
 // Configure multer for audio uploads
@@ -125,8 +126,8 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       })));
     }
 
-    // 5. Generate bot response using Gemini AI - Chinese feedback only
-    const botResponse = await geminiService.generateConversationResponse(
+    // 5. Generate bot response using Claude AI - Chinese feedback only
+    const botResponse = await claudeService.generateConversationResponse(
       transcription.text,
       assessment,
       language,
@@ -137,15 +138,15 @@ router.post('/process', upload.single('audio'), async (req, res) => {
     // 6. Generate translation for Chinese responses
     let translation = null;
     if (language === 'zh-CN' && botResponse) {
-      translation = await geminiService.translateText(botResponse);
+      translation = await claudeService.translateText(botResponse);
       console.log(`📝 Bot response (Chinese): ${botResponse}`);
       console.log(`📝 Translation (English): ${translation}`);
     }
 
-    // 7. Generate qualitative evaluation using Gemini (only in feedback mode)
+    // 7. Generate qualitative evaluation using Claude (only in feedback mode)
     let qualitativeEvaluation = null;
     if (mode === 'feedback') {
-      qualitativeEvaluation = await geminiService.evaluateQualitativeResponse(
+      qualitativeEvaluation = await claudeService.evaluateQualitativeResponse(
         transcription.text,
         assessment,
         language
@@ -249,6 +250,24 @@ function extractPhonemes(words, language) {
       }
     }
     
+    // Get detailed phoneme analysis
+    const wordData = {
+      word: word.Word,
+      phonemes: word.Phonemes ? word.Phonemes.map(p => ({
+        phoneme: p.Phoneme,
+        score: p.PronunciationAssessment?.AccuracyScore || 0,
+        offset: p.Offset,
+        duration: p.Duration,
+        nBestPhonemes: p.PronunciationAssessment?.NBestPhonemes || []
+      })) : []
+    };
+    
+    const { analyses, problemPhonemes, overallTips } = phonemeAnalyzer.analyzeWord(
+      word.Word,
+      wordData,
+      language
+    );
+    
     return {
       word: word.Word,
       offset: word.Offset,
@@ -256,14 +275,19 @@ function extractPhonemes(words, language) {
       wordScore: Math.round(calculatedWordScore), // Use recalculated score
       originalWordScore: word.PronunciationAssessment?.AccuracyScore || 0, // Keep original for reference
       errorType: word.PronunciationAssessment?.ErrorType || 'None',
-      phonemes: word.Phonemes ? word.Phonemes.map(p => ({
+      phonemes: word.Phonemes ? word.Phonemes.map((p, idx) => ({
         phoneme: p.Phoneme,
         score: p.PronunciationAssessment?.AccuracyScore || 0,
         offset: p.Offset,
         duration: p.Duration,
-        nBestPhonemes: p.PronunciationAssessment?.NBestPhonemes || []
+        nBestPhonemes: p.PronunciationAssessment?.NBestPhonemes || [],
+        // Add detailed analysis
+        analysis: analyses[idx] || null
       })) : [],
-      syllables: word.Syllables || []
+      syllables: word.Syllables || [],
+      // Add word-level analysis
+      problemPhonemes,
+      tips: overallTips
     };
   });
 }
@@ -376,7 +400,7 @@ router.post('/translate', async (req, res) => {
       return res.status(400).json({ error: 'No text provided' });
     }
 
-    const translation = await geminiService.translateText(text);
+    const translation = await claudeService.translateText(text);
     res.json({ translation });
   } catch (error) {
     console.error('Translation error:', error);

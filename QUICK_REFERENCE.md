@@ -1,125 +1,72 @@
-# 🚀 Polyglot AI - Quick Reference
+# Quick Reference - What Was Fixed
 
-## What Changed?
+## 🔧 Three Critical Fixes
 
-### Branding
-- **Old**: Chinese AI Assistant
-- **New**: Polyglot AI - Foreign Language Assistant
-- **Current Language**: Mandarin Chinese (🇨🇳)
-- **Future Languages**: Spanish, French, Japanese, German (Coming Soon)
+### 1. ✅ Translations Work (Chinese → English)
+- **Was**: Chinese text instead of English
+- **Now**: Proper English translations
+- **Test**: Click "🌐 Show Translation" on any Chinese bot response
 
-### Design
-Completely revolutionized with a **cyberpunk-meets-minimalism** aesthetic featuring:
-- Animated gradient orb background
-- Custom animated SVG logo
-- Dark theme with neon accents
-- Split-panel layout
-- Glassmorphism effects
-- Enhanced interactivity
+### 2. ✅ All Text is Readable (No White-on-White)
+- **Was**: Invisible text (white on white, light on light)
+- **Now**: High contrast everywhere
+- **Colors**:
+  - Bot messages: White with dark text
+  - Translations: Light blue/purple with contrasting text
+  - Errors: Light red with dark red text
 
-## Key Features
+### 3. ✅ Specific Pronunciation Feedback
+- **Was**: "Fix your pronunciation" (not helpful)
+- **Now**: 
+  - "You said 'z' instead of 'zh'" ⚠️
+  - "Curl your tongue back" 🎯
+  - "Like English 'ch' but tongue curled back" 💡
+  - "This is a very hard sound - don't worry!" ℹ️
 
-### 1. **Animated Background**
-Three floating gradient orbs create a dynamic, futuristic atmosphere.
+## 📂 What Changed
 
-### 2. **Smart Layout**
-- Left: Conversation panel (wider)
-- Right: Voice input & tips (narrower)
-- Fully responsive (mobile-friendly)
+**New File**:
+- `backend/services/phonemeAnalyzer.js` - 30+ phoneme guides
 
-### 3. **Enhanced Recorder**
-- 160px button with neon glow
-- Visual waveform feedback
-- Helpful tips section
-- Loading states
+**Updated**:
+- `App.css` - Color overhaul (20+ changes)
+- `ChatInterface.jsx` - Shows detailed phoneme analysis
+- `geminiService.js` - Rule-based translation (60+ phrases)
+- `audio.js` - Integrated phoneme analyzer
 
-### 4. **Beautiful Messages**
-- User: Purple gradient
-- Bot: Dark translucent
-- Hover animations
-- Translation toggles
-- Neon phoneme displays
+## 🚀 Usage
 
-## Color Codes
+1. **Open app**: http://localhost:5173
+2. **Record Chinese**: Say "你好" or any Chinese phrase
+3. **See**:
+   - Bot responds in Chinese
+   - Click translation → See English ✅
+   - View pronunciation → See EXACT mistakes ✅
+   - All text readable ✅
 
-```css
---navy:    #0a0e27  /* Background */
---indigo:  #6366f1  /* Primary accent */
---purple:  #8b5cf6  /* Secondary accent */
---pink:    #ec4899  /* Tertiary accent */
---teal:    #14b8a6  /* Quaternary accent */
---green:   #10b981  /* Success */
---amber:   #f59e0b  /* Warning */
---red:     #ef4444  /* Error */
+## 💡 Example Feedback You'll See
+
+**Good pronunciation (80%+)**:
+```
+✅ Score: 95% - Excellent!
 ```
 
-## Animation List
-
-1. Orb float (20s)
-2. Logo spin (20s)
-3. Ring pulse (3s)
-4. Dot pulse (2s)
-5. Text shimmer (3s)
-6. Status pulse (2s)
-7. Button hover glow
-8. Recording pulse
-9. Message slide-in
-10. Phoneme glow
-11. Waveform bars
-12. Loading spinner
-
-## Running the App
-
-```bash
-# Terminal 1 - Backend
-cd backend
-npm start
-
-# Terminal 2 - Frontend
-cd frontend
-npm run dev
+**Needs work (60-80%)**:
+```
+📊 Score: 72% - Getting there!
+🎯 Curl your tongue back and touch the roof of your mouth
+Practice makes perfect - try repeating this sound slowly
 ```
 
-Then open: http://localhost:5173
-
-## File Structure
-
+**Common mistake**:
 ```
-frontend/
-├── index.html          (Updated title)
-└── src/
-    ├── App.jsx         (Complete redesign)
-    ├── App.css         (1400+ lines new)
-    └── components/
-        ├── AudioRecorder.jsx
-        └── ChatInterface.jsx
+❌ You said "z" but should say "zh"
+[Common mistake!] badge
+🎯 Curl your tongue back. It's a retroflex sound.
+💡 Like English "j" in "jerk" but with tongue curled back
+ℹ️ Note: "zh" is a very hard sound. Don't worry if it takes time!
 ```
-
-## Responsive Breakpoints
-
-- **1200px+**: Split panel (desktop)
-- **768-1199px**: Single column (tablet)
-- **<768px**: Mobile optimized
-- **<480px**: Compact mode
-
-## Accessibility
-
-✓ Reduced motion support
-✓ High contrast mode
-✓ Keyboard navigation
-✓ Screen reader friendly
-✓ Focus indicators
-
-## Future Enhancements
-
-- [ ] Add language switcher
-- [ ] Implement Spanish
-- [ ] Implement French
-- [ ] Implement Japanese
-- [ ] Implement German
-- [ ] User preferences
-- [ ] Dark/light mode toggle
 
 ---
 
-**Enjoy the revolutionary new design!** 🎉
+**All fixes are live!** Just refresh your browser (Cmd+Shift+R) 🎉

@@ -1,46 +1,48 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Anthropic = require('@anthropic-ai/sdk');
+const translationService = require('./translationService');
 
-class GeminiService {
+class ClaudeService {
   constructor() {
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn('⚠️  GEMINI_API_KEY not set. AI responses will be limited.');
-      this.genAI = null;
+    if (!process.env.CLAUDE_API_KEY) {
+      console.warn('⚠️  CLAUDE_API_KEY not set. AI responses will be limited.');
+      this.client = null;
     } else {
-      this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      this.model = this.genAI.getGenerativeModel({ 
-        model: 'gemini-2.0-flash-exp',  // Updated to Gemini 2.0 Flash
-        generationConfig: {
-          temperature: 0.9,  // More creative for conversation
-          maxOutputTokens: 250,  // Slightly more for natural responses
-          topP: 0.95,
-          topK: 40
-        }
+      this.client = new Anthropic({
+        apiKey: process.env.CLAUDE_API_KEY,
       });
-      console.log('✅ Gemini 2.0 Flash initialized');
+      console.log('✅ Claude API initialized');
     }
   }
 
   async generateConversationResponse(userMessage, assessment, language, conversationHistory = [], mode = 'feedback') {
     console.log(`🤖 Generating response for: "${userMessage}" in ${mode} mode`);
-    console.log(`   Gemini available: ${!!this.genAI}`);
+    console.log(`   Claude available: ${!!this.client}`);
     
-    if (!this.genAI) {
-      console.warn('⚠️  No Gemini API - using fallback');
+    if (!this.client) {
+      console.warn('⚠️  No Claude API - using fallback');
       return this.getFallbackResponse(userMessage, assessment, language, mode);
     }
 
     try {
       const prompt = this.buildPrompt(userMessage, assessment, language, conversationHistory, mode);
-      console.log(`📝 Prompt being sent to Gemini (first 200 chars):\n${prompt.substring(0, 200)}...`);
+      console.log(`📝 Prompt being sent to Claude (first 200 chars):\n${prompt.substring(0, 200)}...`);
       
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const message = await this.client.messages.create({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 250,
+        temperature: 0.9,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      });
       
-      console.log(`✅ Gemini response: "${text}"`);
+      const text = message.content[0].text;
+      
+      console.log(`✅ Claude response: "${text}"`);
       return text;
     } catch (error) {
-      console.error('❌ Gemini API error:', error.message);
+      console.error('❌ Claude API error:', error.message);
       return this.getFallbackResponse(userMessage, assessment, language, mode);
     }
   }
@@ -79,15 +81,17 @@ Pronunciation metrics:
 CRITICAL INSTRUCTIONS:
 1. Respond COMPLETELY in Chinese (汉字) - NO English at all
 2. READ conversation history for context
-3. Provide brief feedback on their Chinese:
+3. BE SPECIFIC about what they said: "${userMessage}"
+   - If they greeted you, greet them back
+   - If they asked a question, answer it
+   - If they made a statement, respond to it naturally
+4. Provide brief feedback on their pronunciation:
    - Pronunciation quality (发音)
    - Grammar if there are issues (语法)
    - Tone accuracy (声调)
-   - Overall score impression
-4. Continue the conversation naturally
-5. Answer their questions in Chinese
+5. Continue the conversation naturally based on what THEY said
 6. Keep response under 3 sentences
-7. Be encouraging and helpful
+7. Be encouraging and conversational
 
 Scoring guidelines:
 - 85%+: Excellent! Praise them (太棒了！非常好！)
@@ -95,17 +99,22 @@ Scoring guidelines:
 - 60-70%: OK, needs work (还可以，需要...)
 - <60%: Encourage more practice (需要多练习...)
 
+IMPORTANT: Respond directly to what they said ("${userMessage}"), don't give generic responses!
+
 Examples:
-- Student (poor pronunciation): "你好"
-  Response: "你的发音需要改进。'你好'的声调要注意，第一个是第三声，第二个是第三声。多练习！"
+- Student says: "你好" (greeting)
+  Response: "你好！你的发音很清楚。你今天怎么样？"
 
-- Student (good): "我喜欢学中文"
-  Response: "说得很好！发音很清楚，声调也准确。你为什么喜欢学中文呢？"
+- Student says: "我喜欢学中文" (statement)
+  Response: "说得很好！你为什么喜欢学中文呢？"
 
-- Student asks: "一加一等于多少？"
-  Response: "一加一等于二。你的发音不错！你在学数学吗？"
+- Student asks: "你叫什么名字？" (question)
+  Response: "我是你的中文老师。你的发音不错！你叫什么名字？"
 
-Respond in pure Chinese with brief feedback and conversation:`;
+- Student says: "今天天气很好" (statement about weather)
+  Response: "是的！发音很清楚。你今天做什么？"
+
+Respond in pure Chinese, directly addressing what they said:`;
     } else {
       // Feedback mode: Detailed analysis
       return `You are an encouraging, patient language learning tutor specializing in ${isChineseLearning ? 'Mandarin Chinese' : 'English'}.
@@ -188,7 +197,7 @@ Respond with detailed feedback:`;
   }
 
   async evaluateQualitativeResponse(userMessage, assessment, language) {
-    if (!this.genAI) {
+    if (!this.client) {
       return this.getBasicEvaluation(assessment);
     }
 
@@ -209,41 +218,26 @@ Provide a brief qualitative evaluation (2-3 sentences) covering:
 
 Keep it encouraging and practical.`;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
+      const message = await this.client.messages.create({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 200,
+        temperature: 0.7,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      });
+      
+      return message.content[0].text;
     } catch (error) {
-      console.error('❌ Gemini evaluation error:', error.message);
+      console.error('❌ Claude evaluation error:', error.message);
       return this.getBasicEvaluation(assessment);
     }
   }
 
   async translateText(chineseText) {
-    if (!this.genAI) {
-      return `[Translation: ${chineseText}]`;
-    }
-
-    try {
-      const prompt = `Translate this Chinese text to English. Provide ONLY the English translation, nothing else. No explanations, no formatting, just the translation:
-
-"${chineseText}"`;
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      let translation = response.text().trim();
-      
-      // Remove any quotes or extra formatting
-      translation = translation.replace(/^["']|["']$/g, '');
-      
-      // Remove common prefixes that might appear
-      translation = translation.replace(/^(English translation:|Translation:|English:)\s*/i, '');
-      
-      console.log(`🌐 Translated: "${chineseText}" → "${translation}"`);
-      return translation;
-    } catch (error) {
-      console.error('❌ Translation error:', error.message);
-      return `[Translation: ${chineseText}]`;
-    }
+    // Use the dedicated translation service (Google Translate)
+    return await translationService.translateToEnglish(chineseText);
   }
 
   getBasicEvaluation(assessment) {
@@ -259,4 +253,4 @@ Keep it encouraging and practical.`;
   }
 }
 
-module.exports = new GeminiService();
+module.exports = new ClaudeService();

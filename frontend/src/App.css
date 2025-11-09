@@ -102,15 +102,22 @@ body {
   font-style: italic;
 }
 
-/* MAIN CONTAINER - FULL WIDTH */
+/* MAIN CONTAINER - TWO COLUMN LAYOUT */
 .main-container {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
   gap: 20px;
+  align-items: start;
 }
 
-/* CHAT INTERFACE - CLEAN AND SPACIOUS */
+@media (max-width: 1024px) {
+  .main-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* CHAT INTERFACE - LEFT COLUMN */
 .chat-interface {
   flex: 1;
   background: rgba(255, 255, 255, 0.95);
@@ -120,6 +127,8 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  min-height: 500px;
+  max-height: 70vh;
 }
 
 .messages-container {
@@ -154,15 +163,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: #6c757d;
   font-size: 16px;
 }
 
-/* MESSAGE BUBBLES - SIMPLE AND CLEAR */
+/* MESSAGE BUBBLES - CONVERSATION STYLE */
 .message {
   display: flex;
   flex-direction: column;
-  max-width: 80%;
+  max-width: 85%;
   animation: slideIn 0.3s ease;
 }
 
@@ -189,16 +198,19 @@ body {
   padding: 16px 20px;
   border-radius: 16px;
   margin-bottom: 5px;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .message.user .message-content {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: #ffffff;
 }
 
 .message.bot .message-content {
-  background: #f5f5f5;
-  color: #333;
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 2px solid #e0e0e0;
 }
 
 .message-text {
@@ -209,87 +221,110 @@ body {
 
 .timestamp {
   font-size: 11px;
-  color: #999;
+  color: #495057;
   padding: 0 20px;
 }
 
-/* TRANSLATION TOGGLE - MINIMAL */
+/* TRANSLATION TOGGLE - VISIBLE ON ALL BACKGROUNDS */
 .translation-toggle {
   margin-top: 10px;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.2);
+  background: #667eea;
   border: none;
   border-radius: 8px;
   color: white;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  font-weight: 500;
 }
 
 .translation-toggle:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #764ba2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .translation-box {
   margin-top: 10px;
   padding: 12px;
-  background: rgba(102, 126, 234, 0.1);
+  background: #e7f3ff;
   border-radius: 8px;
-  font-size: 14px;
-  color: #555;
+  font-size: 15px;
+  color: #1a1a1a;
   font-style: italic;
-  border-left: 3px solid #667eea;
+  border: 1px solid #b3d9ff;
+  line-height: 1.6;
 }
 
 .message.user .translation-box {
-  background: rgba(0, 0, 0, 0.2);
+  background: #2d1b4e;
   color: #ffffff;
-  border-left: 3px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid #ffffff;
 }
 
 /* PHONEME DISPLAY - COMPACT */
 .phonemes-display {
-  margin-top: 12px;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
-  font-size: 13px;
+  margin-top: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid #dee2e6;
 }
 
 .phonemes-display strong {
-  color: #667eea;
+  color: #495057;
   display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
+  margin-bottom: 6px;
+  font-size: 11px;
   text-transform: uppercase;
 }
 
 .word-phonemes-detailed {
-  margin: 8px 0;
-  padding: 10px;
-  background: white;
-  border-radius: 8px;
+  margin: 6px 0;
+  padding: 6px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
 }
 
 .word-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .phoneme-word {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 13px;
   color: #333;
 }
 
 .word-score {
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
   font-weight: 600;
+}
+
+.word-timing {
+  font-size: 9px;
+  color: #6c757d;
+  background: #e9ecef;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.error-type {
+  font-size: 10px;
+  color: #dc3545;
+  background: #f8d7da;
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
 .score-good {
@@ -307,20 +342,100 @@ body {
   color: white;
 }
 
+.phoneme-breakdown {
+  margin-top: 4px;
+}
+
+.phoneme-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+  display: block;
+}
+
 .phoneme-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .phoneme-detail {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #212529;
+  border: 1px solid #dee2e6;
+  margin-bottom: 4px;
+}
+
+.phoneme-header {
+  display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  background: #f5f5f5;
-  border-radius: 6px;
-  font-size: 12px;
+}
+
+.phoneme-analysis-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: #ffffff;
+  border-radius: 3px;
+  border-left: 2px solid #0d6efd;
+  font-size: 10px;
+}
+
+.what-you-said {
+  font-size: 11px;
+  color: #d63384;
+  font-weight: 500;
+  padding: 2px 0;
+}
+
+.common-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 4px;
+  background: #ffc107;
+  color: #000;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.phoneme-feedback {
+  font-size: 10px;
+  color: #495057;
+  padding: 1px 0;
+}
+
+.phoneme-tip {
+  font-size: 10px;
+  color: #0d6efd;
+  background: #e7f1ff;
+  padding: 3px 6px;
+  border-radius: 3px;
+  margin-top: 2px;
+}
+
+.word-tips {
+  margin-top: 4px;
+  padding: 4px;
+  background: #d1ecf1;
+  border-radius: 4px;
+  border-left: 2px solid #0c5460;
+}
+
+.word-tip {
+  font-size: 11px;
+  color: #0c5460;
+  font-weight: 500;
+  padding: 1px 0;
 }
 
 .phoneme {
@@ -350,6 +465,15 @@ body {
   border: 2px solid #3b82f6;
 }
 
+.phoneme-time {
+  font-size: 10px;
+  color: #6c757d;
+  background: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
 .phoneme.phoneme-playing {
   box-shadow: 0 0 10px currentColor;
   transform: scale(1.1);
@@ -357,48 +481,134 @@ body {
 
 /* FEEDBACK - COMPACT */
 .feedback {
-  margin-top: 12px;
-  padding: 12px;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  background: #e7f3ff;
+  border-radius: 6px;
+  border: 1px solid #b3d9ff;
 }
 
 .scores {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .scores span {
-  padding: 6px 12px;
-  background: white;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 3px 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  font-size: 10px;
   font-weight: 600;
-  color: #667eea;
+  color: #0056b3;
+  border: 1px solid #cce5ff;
 }
 
 .ai-evaluation {
-  margin-top: 10px;
-  padding: 10px;
-  background: rgba(139, 92, 246, 0.1);
-  border-left: 3px solid #8b5cf6;
-  border-radius: 6px;
-  font-size: 13px;
+  margin-top: 6px;
+  padding: 6px;
+  background: #f3e8ff;
+  border-left: 2px solid #8b5cf6;
+  border-radius: 4px;
+  font-size: 11px;
 }
 
 .ai-evaluation strong {
-  color: #8b5cf6;
+  color: #6b21a8;
   display: block;
-  margin-bottom: 6px;
-  font-size: 11px;
+  margin-bottom: 4px;
+  font-size: 10px;
   text-transform: uppercase;
 }
 
 .ai-evaluation p {
-  color: #555;
+  color: #1a1a1a;
   margin: 0;
+  font-size: 11px;
+}
+
+.pronunciation-issues {
+  margin-top: 6px;
+  padding: 6px;
+  background: #fff3cd;
+  border-left: 2px solid #ffc107;
+  border-radius: 4px;
+}
+
+.pronunciation-issues strong {
+  color: #856404;
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.word-issue {
+  margin: 4px 0;
+  padding: 4px;
+  background: #ffffff;
+  border-radius: 3px;
+  border: 1px solid #ffeaa7;
+  color: #1a1a1a;
+  font-size: 11px;
+}
+
+.issue-word {
+  font-weight: 600;
+  color: #d63384;
+  margin-right: 4px;
+  font-size: 11px;
+}
+
+.issue-score {
+  color: #6c757d;
+  font-size: 10px;
+}
+
+.phoneme-issues {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #495057;
+  padding: 2px 0;
+}
+
+.suggestions {
+  margin-top: 6px;
+  padding: 6px;
+  background: #d1ecf1;
+  border-left: 2px solid #0c5460;
+  border-radius: 4px;
+}
+
+.suggestions strong {
+  color: #0c5460;
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.suggestions ul {
+  margin: 4px 0 0 12px;
+  padding: 0;
+}
+
+.suggestions li {
+  margin: 2px 0;
+  color: #0c5460;
+  font-size: 11px;
+}
+
+.encouragement {
+  margin-top: 6px;
+  padding: 6px;
+  background: #d4edda;
+  border-left: 2px solid #28a745;
+  border-radius: 4px;
+  color: #155724;
+  font-weight: 500;
+  font-size: 11px;
 }
 
 /* ERROR STATES */
@@ -411,7 +621,7 @@ body {
 .error-suggestions {
   margin-top: 10px;
   padding: 10px;
-  background: rgba(239, 68, 68, 0.05);
+  background: #fff5f5;
   border-left: 3px solid #ef4444;
   border-radius: 6px;
   font-size: 12px;
@@ -430,13 +640,13 @@ body {
 
 .error-suggestions li {
   margin: 4px 0;
-  color: #991b1b;
+  color: #7f1d1d;
 }
 
 .language-mismatch-warning {
   margin: 12px 0;
   padding: 15px;
-  background: rgba(239, 68, 68, 0.1);
+  background: #fff5f5;
   border: 2px solid #ef4444;
   border-radius: 8px;
 }
@@ -450,13 +660,13 @@ body {
 
 .warning-message {
   font-size: 13px;
-  color: #991b1b;
+  color: #7f1d1d;
   margin-bottom: 8px;
 }
 
 .warning-suggestion {
   font-size: 12px;
-  color: #7f1d1d;
+  color: #991b1b;
   font-style: italic;
 }
 
@@ -464,8 +674,9 @@ body {
 .audio-playback {
   margin: 10px 0;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.05);
+  background: #f8f9fa;
   border-radius: 8px;
+  border: 1px solid #dee2e6;
 }
 
 .audio-playback audio {
@@ -473,17 +684,19 @@ body {
   height: 35px;
 }
 
-/* RECORDER CONTAINER - CENTERED */
+/* RECORDER CONTAINER - RIGHT COLUMN */
 .recorder-container {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 30px;
+  padding: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 15px;
+  position: sticky;
+  top: 20px;
 }
 
 .audio-recorder {
@@ -497,11 +710,11 @@ body {
 
 .record-btn,
 .stop-btn {
-  width: 120px;
-  height: 120px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   border: none;
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;

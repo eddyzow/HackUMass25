@@ -191,7 +191,7 @@ function ChatInterface({ messages }) {
                           </div>
                           
                           <div className="phoneme-breakdown">
-                            <div className="phoneme-label">Expected phonemes:</div>
+                            <div className="phoneme-label">Phoneme Analysis:</div>
                             <div className="phoneme-list">
                               {wordData.phonemes.filter(p => p.score > 0).map((p, j) => (
                                 <div 
@@ -200,37 +200,55 @@ function ChatInterface({ messages }) {
                                     isPhonemeActive(index, i, j) ? 'phoneme-active' : ''
                                   }`}
                                 >
-                                  <span 
-                                    className={`phoneme ${
-                                      p.score < 60 ? 'phoneme-bad' : 
-                                      p.score < 80 ? 'phoneme-ok' : 'phoneme-good'
-                                    } ${isPhonemeActive(index, i, j) ? 'phoneme-playing' : ''}`}
-                                    title={`Expected: ${p.phoneme}, Score: ${Math.round(p.score)}%`}
-                                  >
-                                    {p.phoneme}
-                                  </span>
-                                  <span className="phoneme-score-badge">
-                                    {Math.round(p.score)}%
-                                  </span>
-                                  {p.offset !== undefined && (
-                                    <span className="phoneme-time">
-                                      {(p.offset / 10000000).toFixed(3)}s
+                                  <div className="phoneme-header">
+                                    <span 
+                                      className={`phoneme ${
+                                        p.score < 60 ? 'phoneme-bad' : 
+                                        p.score < 80 ? 'phoneme-ok' : 'phoneme-good'
+                                      } ${isPhonemeActive(index, i, j) ? 'phoneme-playing' : ''}`}
+                                      title={`Expected: ${p.phoneme}, Score: ${Math.round(p.score)}%`}
+                                    >
+                                      {p.phoneme}
                                     </span>
-                                  )}
-                                  {p.nBestPhonemes && p.nBestPhonemes.length > 0 && (
-                                    <div className="actual-phonemes">
-                                      <span className="actual-label">You said:</span>
-                                      {p.nBestPhonemes.slice(0, 3).map((nb, k) => (
-                                        <span key={k} className="actual-phoneme">
-                                          {nb.Phoneme} ({Math.round(nb.Score)}%)
-                                        </span>
+                                    <span className="phoneme-score-badge">
+                                      {Math.round(p.score)}%
+                                    </span>
+                                  </div>
+                                  
+                                  {p.analysis && p.analysis.feedback && p.analysis.feedback.length > 0 && (
+                                    <div className="phoneme-analysis-details">
+                                      {p.analysis.whatYouSaid && p.analysis.whatYouSaid !== p.phoneme && p.analysis.whatYouSaid !== 'unclear' && (
+                                        <div className="what-you-said">
+                                          You said: <strong>{p.analysis.whatYouSaid}</strong> (expected: <strong>{p.phoneme}</strong>)
+                                          {p.analysis.isCommonMistake && <span className="common-badge">Common mistake!</span>}
+                                        </div>
+                                      )}
+                                      {p.analysis.feedback.map((fb, k) => (
+                                        <div key={k} className="phoneme-feedback">{fb}</div>
+                                      ))}
+                                      {p.analysis.specificTips && p.analysis.specificTips.map((tip, k) => (
+                                        <div key={k} className="phoneme-tip">{tip}</div>
                                       ))}
                                     </div>
+                                  )}
+                                  
+                                  {p.offset !== undefined && (
+                                    <span className="phoneme-time">
+                                      @{(p.offset / 10000000).toFixed(3)}s
+                                    </span>
                                   )}
                                 </div>
                               ))}
                             </div>
                           </div>
+                          
+                          {wordData.tips && wordData.tips.length > 0 && (
+                            <div className="word-tips">
+                              {wordData.tips.map((tip, k) => (
+                                <div key={k} className="word-tip">{tip}</div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })

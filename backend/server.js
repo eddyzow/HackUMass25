@@ -12,7 +12,7 @@ console.log('Environment check:');
 console.log('- MONGODB_URI:', process.env.MONGODB_URI ? '✓ Set' : '✗ Not set');
 console.log('- AZURE_SPEECH_KEY:', process.env.AZURE_SPEECH_KEY ? '✓ Set' : '✗ Not set');
 console.log('- AZURE_SPEECH_REGION:', process.env.AZURE_SPEECH_REGION || '✗ Not set');
-console.log('- GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? '✓ Set' : '✗ Not set (will use fallback responses)');
+console.log('- CLAUDE_API_KEY:', process.env.CLAUDE_API_KEY ? '✓ Set' : '✗ Not set (will use fallback responses)');
 
 const audioRoutes = require('./routes/audio');
 

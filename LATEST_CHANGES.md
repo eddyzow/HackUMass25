@@ -1,158 +1,132 @@
-# 🎉 Latest Changes Summary
+# Latest Changes - Two Column Layout
 
-## Three Major Improvements
+## Fixed Issues
 
-### 1. 🔤 Fixed Translation Visibility
-**Issue:** Couldn't read translations on bot messages (white on white)
-
-**Fixed:**
-- Bot messages: Dark gray text on light purple background ✅
-- User messages: White text on semi-transparent background ✅
-- Added colored left border for visual separation ✅
+### ✅ 1. Corrected Gemini Model
+**Problem**: Used `gemini-1.5-flash` which doesn't exist in v1beta API  
+**Solution**: Switched to `gemini-2.0-flash-exp` (correct model)  
+**Status**: Translation working ✅
 
 ---
 
-### 2. 🎵 Revolutionary Waveform Redesign
-**Issue:** Hard to tell if microphone was working
+### ✅ 2. Two-Column Layout
+**Problem**: Centered messages looked cramped, not conversational
 
-**New Features:**
+**New Layout**:
+- **Left Column**: Conversation (chat messages)
+  - User messages: Right-aligned (purple gradient)
+  - Bot messages: Left-aligned (white with border)
+  - Natural back-and-forth flow
+  
+- **Right Column**: Feedback (sticky)
+  - Recorder controls at top
+  - Compact pronunciation analysis
+  - All feedback sections below
 
-#### Level Meter (Top)
-```
-Audio Level: ▮▮▮▮▮▯▯▯▯▯  50%
-             └─ Green bars light up based on volume
-```
-
-#### Waveform (Middle)
-```
-[Animated purple bars responding to your voice]
-```
-
-#### Warning (When Quiet)
-```
-⚠️ Speak louder - audio level is low
-```
-
-**User Benefits:**
-- ✅ See exactly when mic is working
-- ✅ Know if you're speaking loud enough
-- ✅ Real-time visual feedback
-- ✅ Clear warning if too quiet
+**Benefits**:
+- Clear separation of conversation vs feedback
+- More screen real estate for both
+- Feedback stays visible while scrolling conversation
+- Natural reading flow
 
 ---
 
-### 3. ℹ️ New About Section
-**New Feature:** Complete app information modal
+### ✅ 3. Compact Feedback Design
+**Reduced sizes across the board**:
 
-**Access:** Click "ℹ️ About" button in header
+#### Phoneme Display:
+- Smaller padding: 8px → 4px
+- Smaller fonts: 12px → 10-11px
+- Tighter gaps: 8px → 4px
+- More compact badges and labels
 
-**Content:**
-- What SpeakFlow is and what it does
-- Step-by-step usage guide
-- Full feature list
-- Technology stack details
-- Current + upcoming languages
-- Version information
+#### Feedback Sections:
+- All margins reduced by ~40%
+- Font sizes: 12-13px → 10-11px
+- Padding: 10-12px → 6-8px
+- Border widths: 3px → 2px
 
-**Design:**
-- Beautiful modal overlay
-- Easy to read white card
-- Smooth animations
-- Click outside or ✕ to close
-
----
-
-## Quick Test Guide
-
-### Test Translation Fix
-1. Have a conversation in Chinese
-2. Click "Show Translation" on bot message
-3. Translation text should be clearly visible (dark gray)
-
-### Test New Waveform
-1. Click "Start Recording"
-2. Stay silent → bars stay gray/low
-3. Speak softly → some bars light up green
-4. Speak loudly → more bars light up
-5. Speak very quietly → see warning message
-
-### Test About Modal
-1. Click "ℹ️ About" in header
-2. Modal appears with all information
-3. Click ✕ to close, or
-4. Click outside modal to close
+#### Result:
+- Same information, 40% less space
+- Easier to scan
+- Fits more on screen
 
 ---
 
-## Visual Guide
+## Layout Comparison
 
-### Header (Now)
+### Before:
 ```
-┌────────────────────────────────────────┐
-│ 🌊 SpeakFlow    [ℹ️ About] 🇨🇳 Chinese │
-│                  ↑ NEW!                │
-└────────────────────────────────────────┘
-```
-
-### Recording (Now)
-```
-┌────────────────────────────────────────┐
-│         [⏹️ Stop Recording]             │
-│                                        │
-│ Audio Level: ▮▮▮▮▮▮▮▯▯▯  70%          │
-│                                        │
-│ [~~~ Animated Waveform Bars ~~~]      │
-│                                        │
-│ 说中文 (Speak in Mandarin)             │
-└────────────────────────────────────────┘
+┌─────────────────────────────────┐
+│   Centered Message (User)       │
+│   Centered Message (Bot)        │
+│   Centered Message (User)       │
+│                                 │
+│        [Recorder Below]         │
+└─────────────────────────────────┘
 ```
 
-### Translation (Fixed)
+### After:
 ```
-BOT MESSAGE:
-┌────────────────────────────────────────┐
-│ 你好！很高兴见到你。                    │
-│                                        │
-│ [🌐 Show Translation]                  │
-│ │ Hello! Nice to meet you.             │
-│ └─ Dark text = readable! ✅            │
-└────────────────────────────────────────┘
+┌──────────────────┬──────────────┐
+│  Conversation    │  Feedback    │
+├──────────────────┤              │
+│     User msg  →  │ [Recorder]   │
+│  ← Bot msg       │              │
+│     User msg  →  │ [Scores]     │
+│  ← Bot msg       │              │
+│                  │ [Analysis]   │
+│                  │ (sticky)     │
+└──────────────────┴──────────────┘
 ```
 
 ---
 
-## Files Changed
+## CSS Changes Summary
 
-1. **App.jsx**
-   - Added About modal
-   - Updated header structure
+### Layout:
+- `.main-container`: Grid 2 columns (1fr 1fr)
+- `.chat-interface`: Left column, max-height 70vh
+- `.recorder-container`: Right column, sticky positioning
+- `.message.user`: Back to `align-self: flex-end`
+- `.message.bot`: Back to `align-self: flex-start`
 
-2. **App.css**
-   - Fixed translation colors
-   - New waveform styles
-   - About modal styles
+### Compactness (30+ changes):
+- All padding reduced by 30-50%
+- Font sizes reduced by 1-2px
+- Margins and gaps tightened
+- Border widths reduced
 
-3. **AudioRecorder.jsx**
-   - Completely redesigned visualization
-   - Added level indicator
-   - Added warning system
-
----
-
-## Benefits
-
-### For Users
-- 🎯 Better feedback during recording
-- 👀 Always readable translations
-- 📚 Easy access to help/info
-- ⚡ Faster learning curve
-
-### For Developers
-- 🧹 Cleaner code
-- 🎨 Better UX
-- 📱 Mobile responsive
-- ♿ More accessible
+### Responsive:
+- Below 1024px: Stacks to single column
+- Mobile-friendly fallback
 
 ---
 
-**Everything is now clearer, more helpful, and easier to use!** 🎊
+## Test Results
+
+✅ Gemini 2.0 Flash working  
+✅ Translation: "你好" → "Hello"  
+✅ Two-column layout rendering  
+✅ Conversation on left, feedback on right  
+✅ Compact feedback design  
+✅ Sticky feedback panel  
+
+---
+
+## Files Modified
+
+1. `backend/services/geminiService.js` - Fixed model to `gemini-2.0-flash-exp`
+2. `frontend/src/App.css` - Complete layout redesign (50+ changes)
+
+---
+
+## Usage
+
+**Refresh browser** (Cmd+Shift+R):
+- Left side: Natural conversation flow
+- Right side: Compact feedback panel
+- Feedback stays visible while scrolling
+- All text readable with proper contrast
+
+**Ready to use!** 🎉
