@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { translateText, generateSpeech } from '../services/api';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
+
 function ChatInterface({ messages }) {
   const messagesEndRef = useRef(null);
   const [activePhoneme, setActivePhoneme] = useState(null); // {messageIndex, wordIndex, phonemeIndex}
@@ -104,7 +106,7 @@ function ChatInterface({ messages }) {
       }
 
       // Play the audio at slower speed with better quality
-      const audio = new Audio(`http://localhost:5001${ttsAudioUrls[messageIndex]}`);
+      const audio = new Audio(`${API_BASE_URL}${ttsAudioUrls[messageIndex]}`);
       audio.preservesPitch = true; // Maintain audio quality when slowing down
       audio.mozPreservesPitch = true; // Firefox support
       audio.webkitPreservesPitch = true; // Safari support
@@ -189,7 +191,7 @@ function ChatInterface({ messages }) {
                   <audio 
                     ref={el => audioRefs.current[index] = el}
                     controls 
-                    src={`http://localhost:5001${msg.audioUrl}`}
+                    src={`${API_BASE_URL}${msg.audioUrl}`}
                     onTimeUpdate={() => handleAudioTimeUpdate(index, msg.phonemes)}
                     onEnded={handleAudioEnded}
                     onPause={handleAudioEnded}
