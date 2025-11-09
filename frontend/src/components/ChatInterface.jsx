@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { translateText } from '../services/api';
+import { translateText, generateSpeech } from '../services/api';
 
 function ChatInterface({ messages }) {
   const messagesEndRef = useRef(null);
@@ -8,6 +8,8 @@ function ChatInterface({ messages }) {
   const [showTranslation, setShowTranslation] = useState({}); // {messageIndex: boolean}
   const [translations, setTranslations] = useState({}); // {messageIndex: translation}
   const [loadingTranslation, setLoadingTranslation] = useState({}); // {messageIndex: boolean}
+  const [loadingTTS, setLoadingTTS] = useState({}); // {messageIndex: boolean}
+  const [ttsAudioUrls, setTtsAudioUrls] = useState({}); // {messageIndex: string}
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -86,6 +88,30 @@ function ChatInterface({ messages }) {
     return activePhoneme?.messageIndex === messageIndex &&
            activePhoneme?.wordIndex === wordIndex &&
            activePhoneme?.phonemeIndex === phonemeIndex;
+  };
+
+  const handleTTSClick = async (messageIndex, text, language = 'zh-CN') => {
+    if (loadingTTS[messageIndex]) return;
+
+    setLoadingTTS(prev => ({ ...prev, [messageIndex]: true }));
+    try {
+      if (!ttsAudioUrls[messageIndex]) {
+        const result = await generateSpeech(text, language);
+        setTtsAudioUrls(prev => ({
+          ...prev,
+          [messageIndex]: result.audioUrl
+        }));
+      }
+
+      // Play the audio at slower speed
+      const audio = new Audio(`http://localhost:5001${ttsAudioUrls[messageIndex]}`);
+      audio.playbackRate = 0.5; // Set playback rate to 75% of normal speed
+      audio.play();
+    } catch (error) {
+      console.error('Failed to generate speech:', error);
+    } finally {
+      setLoadingTTS(prev => ({ ...prev, [messageIndex]: false }));
+    }
   };
 
   return (
@@ -320,6 +346,14 @@ function ChatInterface({ messages }) {
                   {msg.feedback.message && (
                     <div className="encouragement">{msg.feedback.message}</div>
                   )}
+                  
+                  <button
+                    className="listen-pronunciation-btn"
+                    onClick={() => handleTTSClick(index, msg.text)}
+                    disabled={loadingTTS[index]}
+                  >
+                    {loadingTTS[index] ? '⏳ Generating...' : '🔊 Listen to Proper Pronunciation'}
+                  </button>
                 </div>
               )}
             </div>

@@ -35,3 +35,8 @@ export const translateText = async (text) => {
   const response = await axios.post(`${API_BASE_URL}/audio/translate`, { text });
   return response.data;
 };
+
+export const generateSpeech = async (text, language) => {
+  const response = await axios.post(`${API_BASE_URL}/audio/speak`, { text, language });
+  return response.data;
+};

@@ -7,6 +7,7 @@ const speechService = require('../services/speechService');
 const claudeService = require('../services/claudeService');
 const feedbackGenerator = require('../services/feedbackGenerator');
 const phonemeAnalyzer = require('../services/phonemeAnalyzer');
+const elevenLabsService = require('../services/elevenLabsService');
 const Conversation = require('../models/Conversation');
 
 // Configure multer for audio uploads
@@ -495,6 +496,22 @@ router.post('/translate', async (req, res) => {
   } catch (error) {
     console.error('Translation error:', error);
     res.status(500).json({ error: 'Translation failed', translation: `[Translation: ${text}]` });
+  }
+});
+
+router.post('/speak', async (req, res) => {
+  try {
+    const { text, language = 'zh-CN' } = req.body;
+    
+    if (!text) {
+      return res.status(400).json({ error: 'No text provided' });
+    }
+
+    const audioUrl = await elevenLabsService.generateSpeech(text, language);
+    res.json({ audioUrl });
+  } catch (error) {
+    console.error('Text-to-speech error:', error);
+    res.status(500).json({ error: 'Failed to generate speech' });
   }
 });
 
