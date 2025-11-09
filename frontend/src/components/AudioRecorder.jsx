@@ -211,23 +211,19 @@ function AudioRecorder({ onRecordingComplete, language, isLoading }) {
         </div>
       )}
       
-      {isRecording && (
-        <div className="recording-overlay">
-          <div className="recording-indicator">
-            <span className="recording-pulse"></span>
-            <span className="recording-pulse pulse-2"></span>
-            <span className="recording-pulse pulse-3"></span>
-            <span className="recording-icon">🎤</span>
-            <span className="recording-text">Recording...</span>
-            <span className="recording-timer-large">{recordingTime}s / {maxRecordingTime}s</span>
-          </div>
-          <button onClick={stopRecording} className="stop-recording-btn" disabled={isStopping || isLoading}>
-            ⏹️ Stop Recording
-          </button>
-        </div>
-      )}
-      
       <div className="chat-input-container">
+        {isRecording && (
+          <div className="recording-status">
+            <span className="recording-status-icon">🎤</span>
+            <span className="recording-status-text">
+              Recording...
+            </span>
+            <span className="recording-status-timer">
+              {recordingTime}s / {maxRecordingTime}s
+            </span>
+          </div>
+        )}
+        
         <form onSubmit={handleTextSubmit} className="chat-input-form">
           <input
             type="text"
