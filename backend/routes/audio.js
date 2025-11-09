@@ -126,8 +126,8 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       })));
     }
 
-    // 5. Generate bot response using Claude AI - Chinese feedback only
-    const botResponse = await claudeService.generateConversationResponse(
+    // 5. Generate bot response using Claude AI - now returns structured data
+    const claudeResponse = await claudeService.generateConversationResponse(
       transcription.text,
       assessment,
       language,
@@ -135,12 +135,27 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       mode
     );
     
-    // 6. Generate translation for Chinese responses
+    // Extract Chinese response, English translation, and grammar feedback
+    let botResponse = claudeResponse;
     let translation = null;
-    if (language === 'zh-CN' && botResponse) {
-      translation = await claudeService.translateText(botResponse);
+    let grammarSuggestion = null;
+    
+    if (typeof claudeResponse === 'object' && claudeResponse.chinese) {
+      // Structured response from Claude
+      botResponse = claudeResponse.chinese;
+      translation = claudeResponse.english;
+      grammarSuggestion = claudeResponse.grammar;
+      
       console.log(`📝 Bot response (Chinese): ${botResponse}`);
       console.log(`📝 Translation (English): ${translation}`);
+      console.log(`📝 Grammar suggestion: ${grammarSuggestion || 'None'}`);
+    } else {
+      // Fallback or non-conversation mode - use old translation method
+      if (language === 'zh-CN' && botResponse) {
+        translation = await claudeService.translateText(botResponse);
+        console.log(`📝 Bot response (Chinese): ${botResponse}`);
+        console.log(`📝 Translation (English): ${translation}`);
+      }
     }
 
     // 7. Generate qualitative evaluation using Claude (only in feedback mode)
@@ -153,7 +168,7 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       );
     }
 
-    // 7. Save to database
+    // 8. Save to database
     
     if (!conversation) {
       conversation = new Conversation({ sessionId, language, messages: [] });
@@ -178,7 +193,8 @@ router.post('/process', upload.single('audio'), async (req, res) => {
     conversation.messages.push({
       role: 'bot',
       text: botResponse,
-      translation: translation
+      translation: translation,
+      grammarSuggestion: grammarSuggestion
     });
 
     conversation.updatedAt = new Date();
@@ -189,6 +205,8 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       assessment,
       feedback,
       botResponse,
+      translation,
+      grammarSuggestion,
       conversation: conversation.messages,
       detailedAnalysis: {
         totalDuration: calculateTotalDuration(assessment.words),

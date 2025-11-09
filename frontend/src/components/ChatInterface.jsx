@@ -112,13 +112,23 @@ function ChatInterface({ messages }) {
               )}
               
               {showTranslation[index] && msg.role === 'bot' && (
-                <div className="translation-box">
-                  {loadingTranslation[index] ? (
-                    <em>Loading translation...</em>
-                  ) : (
-                    <em>{msg.translation || translations[index] || 'Translation not available'}</em>
+                <>
+                  <div className="translation-box">
+                    {loadingTranslation[index] ? (
+                      <em>Loading translation...</em>
+                    ) : (
+                      <em>{msg.translation || translations[index] || 'Translation not available'}</em>
+                    )}
+                  </div>
+                  
+                  {/* Grammar suggestion if available */}
+                  {msg.grammarSuggestion && (
+                    <div className="grammar-suggestion-box">
+                      <strong>📝 Grammar Tip:</strong>
+                      <p>{msg.grammarSuggestion}</p>
+                    </div>
                   )}
-                </div>
+                </>
               )}
               
               {msg.suggestions && msg.suggestions.length > 0 && (

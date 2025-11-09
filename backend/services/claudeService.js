@@ -29,7 +29,7 @@ class ClaudeService {
       
       const message = await this.client.messages.create({
         model: 'claude-3-5-haiku-20241022',
-        max_tokens: 250,
+        max_tokens: 300,
         temperature: 0.9,
         messages: [{
           role: 'user',
@@ -40,11 +40,39 @@ class ClaudeService {
       const text = message.content[0].text;
       
       console.log(`✅ Claude response: "${text}"`);
+      
+      // Parse the structured response
+      if (mode === 'conversation') {
+        return this.parseStructuredResponse(text);
+      }
+      
       return text;
     } catch (error) {
       console.error('❌ Claude API error:', error.message);
       return this.getFallbackResponse(userMessage, assessment, language, mode);
     }
+  }
+
+  parseStructuredResponse(text) {
+    // Extract CHINESE, ENGLISH, and GRAMMAR from Claude's response
+    const chineseMatch = text.match(/CHINESE:\s*(.+?)(?=\nENGLISH:|$)/s);
+    const englishMatch = text.match(/ENGLISH:\s*(.+?)(?=\nGRAMMAR:|$)/s);
+    const grammarMatch = text.match(/GRAMMAR:\s*(.+?)$/s);
+
+    const chinese = chineseMatch ? chineseMatch[1].trim() : text;
+    const english = englishMatch ? englishMatch[1].trim() : null;
+    const grammar = grammarMatch ? grammarMatch[1].trim() : null;
+
+    console.log(`📝 Parsed - Chinese: "${chinese}"`);
+    console.log(`📝 Parsed - English: "${english}"`);
+    console.log(`📝 Parsed - Grammar: "${grammar}"`);
+
+    // Return structured object
+    return {
+      chinese: chinese,
+      english: english,
+      grammar: grammar
+    };
   }
 
   buildPrompt(userMessage, assessment, language, conversationHistory, mode) {
@@ -68,8 +96,8 @@ class ClaudeService {
     }
 
     if (mode === 'conversation') {
-      // Chinese-only conversational feedback mode
-      return `You are a Chinese language tutor providing feedback and having conversations ONLY in Mandarin Chinese.
+      // Dual-language conversational feedback mode
+      return `You are a Chinese language tutor providing feedback and having conversations in Mandarin Chinese.
 
 The student is learning Chinese and just said: "${userMessage}"
 
@@ -79,42 +107,55 @@ Pronunciation metrics:
 - Fluency: ${scores.fluency}%${historyContext}
 
 CRITICAL INSTRUCTIONS:
-1. Respond COMPLETELY in Chinese (汉字) - NO English at all
-2. READ conversation history for context
-3. BE SPECIFIC about what they said: "${userMessage}"
+1. Generate TWO responses - Chinese AND English translation
+2. Format EXACTLY like this:
+
+CHINESE: [Your Chinese response here]
+ENGLISH: [Exact English translation of the Chinese response]
+GRAMMAR: [Optional - if they made grammatical errors, suggest how a native speaker would say it]
+
+3. Chinese response guidelines:
+   - Respond COMPLETELY in Chinese (汉字)
+   - BE SPECIFIC about what they said: "${userMessage}"
    - If they greeted you, greet them back
    - If they asked a question, answer it
-   - If they made a statement, respond to it naturally
-4. Provide brief feedback on their pronunciation:
-   - Pronunciation quality (发音)
-   - Grammar if there are issues (语法)
-   - Tone accuracy (声调)
-5. Continue the conversation naturally based on what THEY said
-6. Keep response under 3 sentences
-7. Be encouraging and conversational
+   - If they made a statement, respond naturally
+   - Provide brief feedback on pronunciation/tones
+   - Continue the conversation naturally
+   - Keep under 3 sentences
 
-Scoring guidelines:
-- 85%+: Excellent! Praise them (太棒了！非常好！)
-- 70-85%: Good! Note what to improve (不错！注意...)
-- 60-70%: OK, needs work (还可以，需要...)
-- <60%: Encourage more practice (需要多练习...)
+4. Grammar feedback (GRAMMAR line):
+   - ONLY include if there were grammatical errors
+   - Show correct way: "A native speaker would say: [correct version]"
+   - Explain briefly what was wrong
+   - If grammar was perfect, omit this line
 
-IMPORTANT: Respond directly to what they said ("${userMessage}"), don't give generic responses!
+5. Scoring guidelines for tone:
+   - 85%+: Excellent! Praise them (太棒了！非常好！)
+   - 70-85%: Good! Note what to improve (不错！注意...)
+   - 60-70%: OK, needs work (还可以，需要...)
+   - <60%: Encourage more practice (需要多练习...)
 
-Examples:
-- Student says: "你好" (greeting)
-  Response: "你好！你的发音很清楚。你今天怎么样？"
+EXAMPLES:
 
-- Student says: "我喜欢学中文" (statement)
-  Response: "说得很好！你为什么喜欢学中文呢？"
+Student says: "你好"
+CHINESE: 你好！你的发音很清楚。你今天怎么样？
+ENGLISH: Hello! Your pronunciation is very clear. How are you today?
 
-- Student asks: "你叫什么名字？" (question)
-  Response: "我是你的中文老师。你的发音不错！你叫什么名字？"
+Student says: "我喜欢学中文" (perfect grammar)
+CHINESE: 说得很好！你为什么喜欢学中文呢？
+ENGLISH: You said it very well! Why do you like learning Chinese?
 
-- Student says: "今天天气很好" (statement about weather)
-  Response: "是的！发音很清楚。你今天做什么？"
+Student says: "我昨天去学校" (missing 了)
+CHINESE: 不错！你想说什么？
+ENGLISH: Not bad! What did you want to say?
+GRAMMAR: A native speaker would say: "我昨天去了学校" (add 了 after 去 to indicate completed action in the past)
 
-Respond in pure Chinese, directly addressing what they said:`;
+Student asks: "你叫什么名字？"
+CHINESE: 我是你的中文老师。你的发音不错！你叫什么名字？
+ENGLISH: I am your Chinese teacher. Your pronunciation is good! What is your name?
+
+Now respond to: "${userMessage}"`;
     } else {
       // Feedback mode: Detailed analysis
       return `You are an encouraging, patient language learning tutor specializing in ${isChineseLearning ? 'Mandarin Chinese' : 'English'}.
