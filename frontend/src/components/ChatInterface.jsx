@@ -134,14 +134,23 @@ function ChatInterface({ messages }) {
             <div className="message-content">
               <div className="message-text">{msg.text}</div>
               
-              {/* Translation toggle for Chinese bot messages */}
+              {/* Translation toggle and Listen buttons for bot messages */}
               {msg.role === 'bot' && msg.text && /[\u4e00-\u9fa5]/.test(msg.text) && (
-                <button 
-                  className="translation-toggle"
-                  onClick={() => toggleTranslation(index)}
-                >
-                  {showTranslation[index] ? '🔽 Hide Translation' : '🌐 Show Translation'}
-                </button>
+                <div className="message-actions">
+                  <button 
+                    className="translation-toggle"
+                    onClick={() => toggleTranslation(index)}
+                  >
+                    {showTranslation[index] ? '🔽 Hide Translation' : '🌐 Show Translation'}
+                  </button>
+                  <button
+                    className="translation-toggle"
+                    onClick={() => handleTTSClick(index, msg.text, 'en-US')}
+                    disabled={loadingTTS[index]}
+                  >
+                    {loadingTTS[index] ? '⏳ Generating...' : '🎧 Listen'}
+                  </button>
+                </div>
               )}
               
               {showTranslation[index] && msg.role === 'bot' && (
@@ -153,7 +162,7 @@ function ChatInterface({ messages }) {
                       <em>{msg.translation || translations[index] || 'Translation not available'}</em>
                     )}
                   </div>
-                  
+
                   {/* Grammar suggestion if available */}
                   {msg.grammarSuggestion && (
                     <div className="grammar-suggestion-box">
