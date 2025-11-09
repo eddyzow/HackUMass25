@@ -25,10 +25,12 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:5001',
     'http://127.0.0.1:5173',
+    'https://speakflow-frontend-ef9c614d2eca.herokuapp.com',  // Heroku frontend
     'https://eddyzow.tech',           // Your custom domain
     'https://www.eddyzow.tech',       // www subdomain
     'https://eddyzow.github.io',      // GitHub Pages (temporary)
     /\.github\.io$/,                  // Allow any GitHub Pages subdomain
+    /\.herokuapp\.com$/,              // Allow any Heroku app
     /\.tech$/                          // Allow any .tech domain
   ],
   credentials: true
@@ -65,7 +67,7 @@ app.get('/', (req, res) => {
         voices: 'GET /api/audio/tts/voices'
       }
     },
-    frontend: 'https://eddyzow.tech',
+    frontend: 'https://speakflow-frontend-ef9c614d2eca.herokuapp.com',
     documentation: 'https://github.com/eddyzow/HackUMass25'
   });
 });
