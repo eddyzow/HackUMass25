@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/',  // Root path for custom domain
+  base: './',  // Relative paths for GitHub Pages
+  build: {
+    outDir: '../docs'  // Build to docs folder for GitHub Pages
+  },
   server: {
     host: '0.0.0.0',
     port: 5173
