@@ -25,9 +25,11 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:5001',
     'http://127.0.0.1:5173',
-    'https://eddyzow.github.io',
-    /\.github\.io$/,  // Allow any GitHub Pages subdomain
-    /\.tech$/          // Allow any .tech domain
+    'https://eddyzow.tech',           // Your custom domain
+    'https://www.eddyzow.tech',       // www subdomain
+    'https://eddyzow.github.io',      // GitHub Pages (temporary)
+    /\.github\.io$/,                  // Allow any GitHub Pages subdomain
+    /\.tech$/                          // Allow any .tech domain
   ],
   credentials: true
 }));
@@ -48,7 +50,7 @@ mongoose.connect(process.env.MONGODB_URI)
 // Root route - API info page
 app.get('/', (req, res) => {
   res.json({
-    name: 'HackUMass25 Language Learning API',
+    name: 'SpeakFlow - HackUMass25 Language Learning API',
     status: 'running',
     version: '1.0.0',
     endpoints: {
@@ -63,7 +65,7 @@ app.get('/', (req, res) => {
         voices: 'GET /api/audio/tts/voices'
       }
     },
-    frontend: 'https://eddyzow.github.io/HackUMass25',
+    frontend: 'https://eddyzow.tech',
     documentation: 'https://github.com/eddyzow/HackUMass25'
   });
 });

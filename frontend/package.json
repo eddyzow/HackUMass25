@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://eddyzow.github.io/HackUMass25",
+  "homepage": "https://eddyzow.tech",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
