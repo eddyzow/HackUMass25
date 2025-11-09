@@ -67,21 +67,23 @@ class ClaudeService {
     console.log(`📝 Parsed - English: "${english}"`);
     console.log(`📝 Parsed - Grammar: "${grammar}"`);
 
-    // Return structured object
+    // Return structured object with response and translation fields
     return {
-      chinese: chinese,
-      english: english,
-      grammar: grammar
+      response: chinese,
+      translation: english,
+      grammarSuggestion: grammar
     };
   }
 
   buildPrompt(userMessage, assessment, language, conversationHistory, mode) {
     const isChineseLearning = language === 'zh-CN';
-    const scores = {
+    
+    // Handle text input (no assessment) vs voice input (with assessment)
+    const scores = assessment ? {
       pronunciation: Math.round(assessment.pronunciationScore || 0),
       accuracy: Math.round(assessment.accuracyScore || 0),
       fluency: Math.round(assessment.fluencyScore || 0)
-    };
+    } : null;
 
     // Build conversation context - include MORE history for better context
     let historyContext = '';
@@ -96,15 +98,26 @@ class ClaudeService {
     }
 
     if (mode === 'conversation') {
-      // Dual-language conversational feedback mode
-      return `You are a Chinese language tutor providing feedback and having conversations in Mandarin Chinese.
-
-The student is learning Chinese and just said: "${userMessage}"
-
+      // Text input or conversation mode
+      const pronunciationInfo = scores ? `
+The student just SPOKE this message (voice recording):
 Pronunciation metrics:
 - Overall pronunciation: ${scores.pronunciation}%
 - Accuracy: ${scores.accuracy}%
-- Fluency: ${scores.fluency}%${historyContext}
+- Fluency: ${scores.fluency}%` : `
+The student TYPED this message (text input - they can also record voice for pronunciation practice).`;
+
+      // Dual-language conversational feedback mode
+      return `You are a Chinese language tutor that helps students through BOTH text chat AND voice recordings.
+
+IMPORTANT CONTEXT:
+- Students can TYPE messages to ask questions or chat
+- Students can also RECORD VOICE to practice pronunciation and get feedback
+- You handle BOTH modes - text questions AND pronunciation practice
+- This particular message was ${scores ? 'SPOKEN (voice recording)' : 'TYPED (text message)'}
+
+The student is learning Chinese and just said: "${userMessage}"
+${pronunciationInfo}${historyContext}
 
 CRITICAL INSTRUCTIONS:
 1. Generate TWO responses - Chinese AND English translation
@@ -118,9 +131,9 @@ GRAMMAR: [Optional - if they made grammatical errors, suggest how a native speak
    - Respond COMPLETELY in Chinese (汉字)
    - BE SPECIFIC about what they said: "${userMessage}"
    - If they greeted you, greet them back
-   - If they asked a question, answer it
+   - If they asked a question, answer it directly and helpfully
    - If they made a statement, respond naturally
-   - Provide brief feedback on pronunciation/tones
+   - ${scores ? 'Provide brief feedback on their pronunciation/tones' : 'Encourage them to also try SPEAKING for pronunciation practice'}
    - Continue the conversation naturally
    - Keep under 3 sentences
 
@@ -157,7 +170,12 @@ ENGLISH: I am your Chinese teacher. Your pronunciation is good! What is your nam
 
 Now respond to: "${userMessage}"`;
     } else {
-      // Feedback mode: Detailed analysis
+      // Feedback mode: Detailed analysis (only used with voice recordings)
+      if (!scores) {
+        // Shouldn't happen, but fallback to conversation mode if no scores
+        return this.buildPrompt(userMessage, assessment, language, conversationHistory, 'conversation');
+      }
+      
       return `You are an encouraging, patient language learning tutor specializing in ${isChineseLearning ? 'Mandarin Chinese' : 'English'}.
 
 The student just said: "${userMessage}"
@@ -186,9 +204,9 @@ Respond with detailed feedback:`;
   }
 
   getFallbackResponse(userMessage, assessment, language, mode = 'feedback') {
-    const score = assessment.pronunciationScore || 0;
+    const score = assessment?.pronunciationScore || 0;
     
-    console.log(`⚠️  Using fallback response (Gemini not available)`);
+    console.log(`⚠️  Using fallback response (Claude not available)`);
     
     if (mode === 'conversation') {
       // Conversation mode fallback: Try to be contextual
@@ -197,22 +215,40 @@ Respond with detailed feedback:`;
       // Check for common patterns
       if (lowerMessage.includes('help') || lowerMessage.includes('?')) {
         if (language === 'zh-CN') {
-          return `当然可以帮你！你需要什么具体的帮助？继续练习中文！加油！`;
+          return {
+            response: `当然可以帮你！你需要什么具体的帮助？继续练习中文！加油！`,
+            translation: `Of course I can help you! What specific help do you need? Keep practicing Chinese! Keep going!`
+          };
         } else {
-          return `I'd love to help! Could you tell me more about what you need? Your pronunciation is getting better!`;
+          return {
+            response: `I'm happy to help! What do you need assistance with?`,
+            translation: null
+          };
         }
       } else if (lowerMessage.includes('like') || lowerMessage.includes('love')) {
         if (language === 'zh-CN') {
-          return `很有意思！告诉我更多 - 你还喜欢什么？`;
+          return {
+            response: `很有意思！告诉我更多 - 你还喜欢什么？`,
+            translation: `Very interesting! Tell me more - what else do you like?`
+          };
         } else {
-          return `That sounds great! What else do you enjoy doing?`;
+          return {
+            response: `That sounds great! What else do you enjoy doing?`,
+            translation: null
+          };
         }
       } else {
         // Generic conversational response
         if (language === 'zh-CN') {
-          return `有意思！告诉我更多关于这个的事情。你能详细说说吗？`;
+          return {
+            response: `有意思！告诉我更多关于这个的事情。你能详细说说吗？`,
+            translation: `Interesting! Tell me more about this. Can you explain in detail?`
+          };
         } else {
-          return `Interesting! Can you tell me more about "${userMessage}"?`;
+          return {
+            response: `Interesting! Can you tell me more about "${userMessage}"?`,
+            translation: null
+          };
         }
       }
     } else {

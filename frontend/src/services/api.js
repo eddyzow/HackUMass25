@@ -4,7 +4,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
 
 export const processAudio = async (audioBlob, sessionId, language) => {
   const formData = new FormData();
-  formData.append('audio', audioBlob, 'recording.webm');
+  
+  // Check if this is a text input
+  if (audioBlob.isTextInput) {
+    formData.append('text', audioBlob.textContent);
+    formData.append('isTextInput', 'true');
+  } else {
+    formData.append('audio', audioBlob, 'recording.webm');
+  }
+  
   formData.append('sessionId', sessionId);
   formData.append('language', language);
   formData.append('mode', 'conversation'); // Always conversation mode

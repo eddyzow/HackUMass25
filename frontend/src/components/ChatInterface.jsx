@@ -266,7 +266,8 @@ function ChatInterface({ messages }) {
                 </div>
               )}
               
-              {msg.feedback && (
+              {/* Feedback only for user messages with pronunciation data */}
+              {msg.role === 'user' && msg.feedback && msg.phonemes && msg.phonemes.length > 0 && (
                 <div className="feedback">
                   <div className="scores">
                     {msg.feedback.accuracyScore && (

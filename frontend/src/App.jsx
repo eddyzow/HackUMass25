@@ -24,6 +24,12 @@ function App() {
   }, [sessionId]);
 
   const handleRecordingComplete = async (audioBlob) => {
+    // Prevent duplicate calls
+    if (isLoading) {
+      console.log('⚠️ Already processing, ignoring duplicate call');
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -161,12 +167,12 @@ function App() {
       <main className="main-container">
         <ChatInterface messages={messages} />
         
-        <div className="recorder-container">
+        <div className="input-container">
           <AudioRecorder 
             onRecordingComplete={handleRecordingComplete}
             language={language}
+            isLoading={isLoading}
           />
-          {isLoading && <div className="loading">Processing...</div>}
         </div>
       </main>
     </div>

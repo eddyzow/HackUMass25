@@ -38,17 +38,82 @@ router.post('/process', upload.single('audio'), async (req, res) => {
   console.log('\n=== NEW AUDIO PROCESSING REQUEST ===');
   console.log('Time:', new Date().toISOString());
   
-  const { sessionId, language = 'zh-CN', mode = 'feedback' } = req.body;
+  const { sessionId, language = 'zh-CN', mode = 'feedback', isTextInput, text } = req.body;
   const audioFile = req.file;
+  let conversation = null; // Declare at function scope so error handler can access it
   
   try {
     console.log('Request details:', {
       sessionId,
       language,
       mode,
+      isTextInput: isTextInput === 'true',
+      hasText: !!text,
       hasAudioFile: !!audioFile,
       audioFileName: audioFile?.filename
     });
+
+    // Handle text input
+    if (isTextInput === 'true' && text) {
+      console.log(`✅ Processing text input for session ${sessionId}, language: ${language}`);
+      console.log('User text:', text);
+
+      // Add user message (text only, no pronunciation data)
+      const userMessage = {
+        role: 'user',
+        text: text,
+        timestamp: new Date()
+      };
+
+      // Get AI response using Claude - use generateConversationResponse
+      // Get existing messages first
+      conversation = await Conversation.findOne({ sessionId });
+      const conversationHistory = conversation?.messages || [];
+      
+      const aiResponse = await claudeService.generateConversationResponse(
+        text,
+        null, // no assessment for text input
+        language,
+        conversationHistory, // existing conversation history
+        'conversation'
+      );
+
+      console.log('AI Response:', aiResponse);
+
+      // Add bot message
+      const botMessage = {
+        role: 'bot',
+        text: aiResponse.response || aiResponse,
+        timestamp: new Date()
+      };
+
+      // Add grammar suggestion if available
+      if (aiResponse.grammarSuggestion) {
+        botMessage.grammarSuggestion = aiResponse.grammarSuggestion;
+      }
+
+      // Add translation if available
+      if (aiResponse.translation) {
+        botMessage.translation = aiResponse.translation;
+      }
+
+      // Use findOneAndUpdate with upsert to avoid duplicate key errors
+      conversation = await Conversation.findOneAndUpdate(
+        { sessionId },
+        {
+          $setOnInsert: { sessionId, language, createdAt: new Date() },
+          $push: { messages: { $each: [userMessage, botMessage] } }
+        },
+        { upsert: true, new: true }
+      );
+
+      console.log('✅ Text input processed successfully');
+
+      return res.json({
+        success: true,
+        conversation: conversation.messages
+      });
+    }
 
     if (!audioFile) {
       console.error('❌ No audio file in request');
@@ -68,7 +133,7 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       console.log('⚠️  No speech detected in audio, returning user-friendly message');
       
       // Get existing conversation
-      let conversation = await Conversation.findOne({ sessionId });
+      conversation = await Conversation.findOne({ sessionId });
       
       return res.json({
         error: true,
@@ -115,7 +180,7 @@ router.post('/process', upload.single('audio'), async (req, res) => {
     const feedback = feedbackGenerator.generateFeedback(assessment, language);
 
     // 4. Get conversation history for context
-    let conversation = await Conversation.findOne({ sessionId });
+    conversation = await Conversation.findOne({ sessionId });
     const conversationHistory = conversation?.messages || [];
     
     console.log(`💬 Conversation history: ${conversationHistory.length} messages`);
@@ -140,18 +205,19 @@ router.post('/process', upload.single('audio'), async (req, res) => {
     let translation = null;
     let grammarSuggestion = null;
     
-    if (typeof claudeResponse === 'object' && claudeResponse.chinese) {
-      // Structured response from Claude
-      botResponse = claudeResponse.chinese;
-      translation = claudeResponse.english;
-      grammarSuggestion = claudeResponse.grammar;
+    if (typeof claudeResponse === 'object' && claudeResponse.response) {
+      // Structured response from Claude (conversation mode)
+      botResponse = claudeResponse.response;
+      translation = claudeResponse.translation;
+      grammarSuggestion = claudeResponse.grammarSuggestion;
       
       console.log(`📝 Bot response (Chinese): ${botResponse}`);
       console.log(`📝 Translation (English): ${translation}`);
       console.log(`📝 Grammar suggestion: ${grammarSuggestion || 'None'}`);
-    } else {
-      // Fallback or non-conversation mode - use old translation method
-      if (language === 'zh-CN' && botResponse) {
+    } else if (typeof claudeResponse === 'string') {
+      // String response (feedback mode or fallback) - translate if needed
+      botResponse = claudeResponse;
+      if (language === 'zh-CN') {
         translation = await claudeService.translateText(botResponse);
         console.log(`📝 Bot response (Chinese): ${botResponse}`);
         console.log(`📝 Translation (English): ${translation}`);
@@ -168,13 +234,9 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       );
     }
 
-    // 8. Save to database
+    // 8. Save to database - Use atomic update to prevent duplicate key errors
     
-    if (!conversation) {
-      conversation = new Conversation({ sessionId, language, messages: [] });
-    }
-
-    conversation.messages.push({
+    const userMessage = {
       role: 'user',
       text: transcription.text,
       audioUrl: `/uploads/${audioFile.filename}`,
@@ -187,18 +249,28 @@ router.post('/process', upload.single('audio'), async (req, res) => {
         suggestions: feedback.suggestions,
         message: feedback.overall,
         qualitativeEvaluation: qualitativeEvaluation  // AI-generated insights
-      }
-    });
+      },
+      timestamp: new Date()
+    };
 
-    conversation.messages.push({
+    const botMessage = {
       role: 'bot',
       text: botResponse,
       translation: translation,
-      grammarSuggestion: grammarSuggestion
-    });
+      grammarSuggestion: grammarSuggestion,
+      timestamp: new Date()
+    };
 
-    conversation.updatedAt = new Date();
-    await conversation.save();
+    // Use atomic findOneAndUpdate with upsert to avoid duplicate key errors
+    conversation = await Conversation.findOneAndUpdate(
+      { sessionId },
+      {
+        $setOnInsert: { sessionId, language, createdAt: new Date() },
+        $set: { updatedAt: new Date() },
+        $push: { messages: { $each: [userMessage, botMessage] } }
+      },
+      { upsert: true, new: true }
+    );
 
     res.json({
       transcription: transcription.text,

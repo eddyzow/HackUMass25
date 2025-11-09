@@ -1,18 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
 import RecordRTC from 'recordrtc';
 
-function AudioRecorder({ onRecordingComplete, language }) {
+function AudioRecorder({ onRecordingComplete, language, isLoading }) {
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [textInput, setTextInput] = useState('');
+  const [isStopping, setIsStopping] = useState(false); // NEW: Prevent duplicate stops
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const animationRef = useRef(null);
   const analyserRef = useRef(null);
+  const recordingTimerRef = useRef(null);
+  const maxRecordingTime = 15; // 15 seconds limit
 
   const startRecording = async () => {
     setError(null);
+    setIsStopping(false); // Reset stopping flag when starting new recording
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -55,6 +60,20 @@ function AudioRecorder({ onRecordingComplete, language }) {
 
       recorderRef.current.startRecording();
       setIsRecording(true);
+      setRecordingTime(0);
+      
+      // Start timer for recording duration
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => {
+          const newTime = prev + 1;
+          // Auto-stop at 15 seconds
+          if (newTime >= maxRecordingTime) {
+            stopRecording();
+          }
+          return newTime;
+        });
+      }, 1000);
+      
       console.log('🎤 Recording started with audio visualization');
     } catch (error) {
       console.error('Error accessing microphone:', error);
@@ -72,11 +91,22 @@ function AudioRecorder({ onRecordingComplete, language }) {
   };
 
   const stopRecording = () => {
-    if (!recorderRef.current) return;
+    if (!recorderRef.current || isStopping) {
+      console.log('⚠️ Already stopping or no recorder, ignoring duplicate stop call');
+      return;
+    }
 
+    console.log('🛑 Stopping recording...');
+    setIsStopping(true); // Prevent duplicate stops
     setIsRecording(false);
-    setIsProcessing(true);
     setAudioLevel(0);
+    setRecordingTime(0);
+
+    // Clear recording timer
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
 
     // Stop animation
     if (animationRef.current) {
@@ -84,7 +114,7 @@ function AudioRecorder({ onRecordingComplete, language }) {
     }
 
     try {
-      recorderRef.current.stopRecording(() => {
+      recorderRef.current.stopRecording(async () => {
         const blob = recorderRef.current.getBlob();
         
         if (streamRef.current) {
@@ -94,17 +124,36 @@ function AudioRecorder({ onRecordingComplete, language }) {
         // Check if blob is valid
         if (!blob || blob.size === 0) {
           setError('Recording failed. Please try again.');
-          setIsProcessing(false);
+          setIsStopping(false);
           return;
         }
 
-        onRecordingComplete(blob);
-        setIsProcessing(false);
+        console.log('✅ Recording stopped, processing...');
+        await onRecordingComplete(blob);
+        setIsStopping(false); // Reset after processing
       });
     } catch (error) {
       console.error('Error stopping recording:', error);
       setError('Failed to process recording. Please try again.');
-      setIsProcessing(false);
+      setIsStopping(false);
+    }
+  };
+
+  const handleTextSubmit = async (e) => {
+    e.preventDefault();
+    if (!textInput.trim() || isLoading || isRecording) return;
+    
+    try {
+      // Create a mock audio blob for text input
+      const mockBlob = new Blob([textInput], { type: 'text/plain' });
+      mockBlob.isTextInput = true;
+      mockBlob.textContent = textInput;
+      
+      await onRecordingComplete(mockBlob);
+      setTextInput('');
+    } catch (error) {
+      console.error('Error submitting text:', error);
+      setError('Failed to send message. Please try again.');
     }
   };
 
@@ -113,73 +162,73 @@ function AudioRecorder({ onRecordingComplete, language }) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
     };
   }, []);
 
   return (
-    <div className="audio-recorder">
+    <div className="audio-recorder-chat">
       {error && (
-        <div className="recorder-error">
+        <div className="recorder-error-toast">
           ⚠️ {error}
         </div>
       )}
       
-      {!isRecording && !isProcessing && (
-        <button onClick={startRecording} className="record-btn">
-          🎤 Start Recording
-        </button>
-      )}
-      
       {isRecording && (
-        <>
-          <button onClick={stopRecording} className="stop-btn">
+        <div className="recording-overlay">
+          <div className="recording-indicator">
+            <span className="recording-pulse"></span>
+            <span className="recording-pulse pulse-2"></span>
+            <span className="recording-pulse pulse-3"></span>
+            <span className="recording-icon">🎤</span>
+            <span className="recording-text">Recording...</span>
+            <span className="recording-timer-large">{recordingTime}s / {maxRecordingTime}s</span>
+          </div>
+          <button onClick={stopRecording} className="stop-recording-btn">
             ⏹️ Stop Recording
           </button>
-          <div className="waveform-container">
-            <div className="audio-level-indicator">
-              <div className="level-label">Audio Level:</div>
-              <div className="level-bars">
-                {[...Array(10)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`level-bar ${audioLevel > (i + 1) * 10 ? 'active' : ''}`}
-                  />
-                ))}
-              </div>
-              <div className="level-percentage">{Math.round(audioLevel)}%</div>
-            </div>
-            <div className="waveform-visualizer">
-              {[...Array(30)].map((_, i) => {
-                const barHeight = 20 + (audioLevel * Math.random() * 0.8);
-                return (
-                  <div
-                    key={i}
-                    className="wave-bar"
-                    style={{
-                      height: `${Math.min(100, barHeight)}%`,
-                      opacity: audioLevel > 5 ? 1 : 0.3
-                    }}
-                  />
-                );
-              })}
-            </div>
-            {audioLevel < 10 && (
-              <div className="low-audio-warning">
-                ⚠️ Speak louder - audio level is low
-              </div>
-            )}
+        </div>
+      )}
+      
+      <div className="chat-input-container">
+        <form onSubmit={handleTextSubmit} className="chat-input-form">
+          <input
+            type="text"
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            placeholder={language === 'zh-CN' ? '输入中文消息或点击麦克风说话...' : 'Type a message or click mic to speak...'}
+            className="chat-text-input"
+            disabled={isLoading || isRecording}
+          />
+          
+          <button 
+            type="button"
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`mic-button ${isRecording ? 'recording' : ''}`}
+            disabled={isLoading}
+            title={isRecording ? 'Stop recording' : 'Start recording'}
+          >
+            {isRecording ? '⏹️' : '🎤'}
+          </button>
+          
+          <button 
+            type="submit" 
+            className="send-button"
+            disabled={!textInput.trim() || isLoading || isRecording}
+            title="Send message"
+          >
+            {isLoading ? '⏳' : '➤'}
+          </button>
+        </form>
+        
+        {isLoading && (
+          <div className="processing-indicator">
+            <div className="processing-spinner-small"></div>
+            <span>Processing...</span>
           </div>
-        </>
-      )}
-
-      {isProcessing && (
-        <div className="processing">Processing audio...</div>
-      )}
-
-      <div className="language-hint">
-        {language === 'zh-CN' 
-          ? '说中文 (Speak in Mandarin)' 
-          : 'Speak in English'}
+        )}
       </div>
     </div>
   );
