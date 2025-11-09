@@ -103,10 +103,17 @@ function ChatInterface({ messages }) {
         }));
       }
 
-      // Play the audio at slower speed
+      // Play the audio at slower speed with better quality
       const audio = new Audio(`http://localhost:5001${ttsAudioUrls[messageIndex]}`);
-      audio.playbackRate = 0.5; // Set playback rate to 75% of normal speed
-      audio.play();
+      audio.preservesPitch = true; // Maintain audio quality when slowing down
+      audio.mozPreservesPitch = true; // Firefox support
+      audio.webkitPreservesPitch = true; // Safari support
+      audio.playbackRate = 0.75; // Set playback rate to 75% of normal speed
+      
+      // Wait for audio to be loaded before playing to ensure smooth playback
+      audio.addEventListener('canplaythrough', () => {
+        audio.play();
+      });
     } catch (error) {
       console.error('Failed to generate speech:', error);
     } finally {
