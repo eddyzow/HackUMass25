@@ -26,12 +26,15 @@ app.use(cors({
     'http://localhost:5001',
     'http://127.0.0.1:5173',
     'https://speakflow-frontend-ef9c614d2eca.herokuapp.com',  // Heroku frontend
-    'https://eddyzow.tech',           // Your custom domain
+    'https://eddyzow.tech',           // Custom domain
     'https://www.eddyzow.tech',       // www subdomain
+    'https://eddyzow.net',            // Alternate domain
+    'https://www.eddyzow.net',        // www subdomain
     'https://eddyzow.github.io',      // GitHub Pages (temporary)
     /\.github\.io$/,                  // Allow any GitHub Pages subdomain
     /\.herokuapp\.com$/,              // Allow any Heroku app
-    /\.tech$/                          // Allow any .tech domain
+    /\.tech$/,                        // Allow any .tech domain
+    /\.net$/                          // Allow any .net domain
   ],
   credentials: true
 }));
