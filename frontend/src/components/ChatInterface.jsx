@@ -108,7 +108,7 @@ function ChatInterface({ messages }) {
       audio.preservesPitch = true; // Maintain audio quality when slowing down
       audio.mozPreservesPitch = true; // Firefox support
       audio.webkitPreservesPitch = true; // Safari support
-      audio.playbackRate = 0.75; // Set playback rate to 75% of normal speed
+      audio.playbackRate = 0.9; // Set playback rate to 75% of normal speed
       
       // Wait for audio to be loaded before playing to ensure smooth playback
       audio.addEventListener('canplaythrough', () => {
