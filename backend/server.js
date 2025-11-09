@@ -21,7 +21,14 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5001', 'http://127.0.0.1:5173'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5001',
+    'http://127.0.0.1:5173',
+    'https://eddyzow.github.io',
+    /\.github\.io$/,  // Allow any GitHub Pages subdomain
+    /\.tech$/          // Allow any .tech domain
+  ],
   credentials: true
 }));
 app.use(bodyParser.json());
@@ -38,11 +45,39 @@ mongoose.connect(process.env.MONGODB_URI)
 .then(() => console.log('✅ MongoDB Atlas connected'))
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
+// Root route - API info page
+app.get('/', (req, res) => {
+  res.json({
+    name: 'HackUMass25 Language Learning API',
+    status: 'running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      processAudio: 'POST /api/audio/process',
+      processText: 'POST /api/audio/process-text',
+      getConversation: 'GET /api/audio/conversation/:sessionId',
+      tts: {
+        generate: 'POST /api/audio/tts/generate',
+        phoneme: 'POST /api/audio/tts/phoneme',
+        status: 'GET /api/audio/tts/status',
+        voices: 'GET /api/audio/tts/voices'
+      }
+    },
+    frontend: 'https://eddyzow.github.io/HackUMass25',
+    documentation: 'https://github.com/eddyzow/HackUMass25'
+  });
+});
+
 // Routes
 app.use('/api/audio', audioRoutes);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+  res.json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
