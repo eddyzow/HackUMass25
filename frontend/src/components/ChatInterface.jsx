@@ -18,16 +18,20 @@ function ChatInterface({ messages }) {
     if (!audio || !phonemesData) return;
 
     const currentTime = audio.currentTime * 10000000; // Convert to Azure's tick format
+    const HIGHLIGHT_BUFFER = 1500000; // 150ms buffer before and after phoneme (in ticks)
 
-    // Find which phoneme is currently playing
+    // Find which phoneme is currently playing with extended timing window
     let found = false;
     for (let wordIdx = 0; wordIdx < phonemesData.length; wordIdx++) {
       const word = phonemesData[wordIdx];
       for (let phonemeIdx = 0; phonemeIdx < (word.phonemes?.length || 0); phonemeIdx++) {
         const phoneme = word.phonemes[phonemeIdx];
         if (phoneme.offset !== undefined && phoneme.duration !== undefined) {
-          const phonemeEnd = phoneme.offset + phoneme.duration;
-          if (currentTime >= phoneme.offset && currentTime <= phonemeEnd) {
+          // Extend the highlight window before and after the actual phoneme timing
+          const phonemeStart = phoneme.offset - HIGHLIGHT_BUFFER;
+          const phonemeEnd = phoneme.offset + phoneme.duration + HIGHLIGHT_BUFFER;
+          
+          if (currentTime >= phonemeStart && currentTime <= phonemeEnd) {
             setActivePhoneme({ messageIndex, wordIndex: wordIdx, phonemeIndex: phonemeIdx });
             found = true;
             break;
@@ -94,76 +98,91 @@ function ChatInterface({ messages }) {
               {msg.phonemes && msg.phonemes.length > 0 && (
                 <div className="phonemes-display">
                   <strong>🔊 Detailed Pronunciation Analysis:</strong>
-                  {msg.phonemes.map((wordData, i) => {
-                    // Skip words with 0% score (wrong language detection)
-                    if (wordData.wordScore === 0) return null;
-                    
-                    return (
-                    <div key={i} className="word-phonemes-detailed">
-                      <div className="word-header">
-                        <span className="phoneme-word">
-                          {wordData.word}
-                        </span>
-                        <span className={`word-score ${
-                          wordData.wordScore >= 80 ? 'score-good' : 
-                          wordData.wordScore >= 60 ? 'score-ok' : 'score-bad'
-                        }`} title={`Calculated from phoneme average. Original Azure score: ${wordData.originalWordScore}%`}>
-                          {Math.round(wordData.wordScore)}% ⌀
-                        </span>
-                        {wordData.offset !== undefined && (
-                          <span className="word-timing">
-                            @{(wordData.offset / 10000000).toFixed(2)}s
-                            {wordData.duration && ` (${(wordData.duration / 10000000).toFixed(2)}s)`}
-                          </span>
-                        )}
-                        {wordData.errorType && wordData.errorType !== 'None' && (
-                          <span className="error-type">⚠️ {wordData.errorType}</span>
-                        )}
+                  {msg.phonemes[0]?.errorType === 'WrongLanguage' ? (
+                    <div className="language-mismatch-warning">
+                      <div className="warning-header">
+                        ⚠️ Language Mismatch Detected
                       </div>
-                      
-                      <div className="phoneme-breakdown">
-                        <div className="phoneme-label">Expected phonemes:</div>
-                        <div className="phoneme-list">
-                          {wordData.phonemes.filter(p => p.score > 0).map((p, j) => (
-                            <div 
-                              key={j} 
-                              className={`phoneme-detail ${
-                                isPhonemeActive(index, i, j) ? 'phoneme-active' : ''
-                              }`}
-                            >
-                              <span 
-                                className={`phoneme ${
-                                  p.score < 60 ? 'phoneme-bad' : 
-                                  p.score < 80 ? 'phoneme-ok' : 'phoneme-good'
-                                } ${isPhonemeActive(index, i, j) ? 'phoneme-playing' : ''}`}
-                                title={`Expected: ${p.phoneme}, Score: ${Math.round(p.score)}%`}
-                              >
-                                {p.phoneme}
-                              </span>
-                              <span className="phoneme-score-badge">
-                                {Math.round(p.score)}%
-                              </span>
-                              {p.offset !== undefined && (
-                                <span className="phoneme-time">
-                                  {(p.offset / 10000000).toFixed(3)}s
-                                </span>
-                              )}
-                              {p.nBestPhonemes && p.nBestPhonemes.length > 0 && (
-                                <div className="actual-phonemes">
-                                  <span className="actual-label">You said:</span>
-                                  {p.nBestPhonemes.slice(0, 3).map((nb, k) => (
-                                    <span key={k} className="actual-phoneme">
-                                      {nb.Phoneme} ({Math.round(nb.Score)}%)
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                      <div className="warning-message">
+                        {msg.phonemes[0].detectedLanguage}
+                      </div>
+                      <div className="warning-suggestion">
+                        Please switch to the correct language mode or speak in the selected language.
                       </div>
                     </div>
-                  )})}
+                  ) : (
+                    msg.phonemes.map((wordData, i) => {
+                      // Skip words with 0% score (wrong language detection)
+                      if (wordData.wordScore === 0) return null;
+                      
+                      return (
+                        <div key={i} className="word-phonemes-detailed">
+                          <div className="word-header">
+                            <span className="phoneme-word">
+                              {wordData.word}
+                            </span>
+                            <span className={`word-score ${
+                              wordData.wordScore >= 80 ? 'score-good' : 
+                              wordData.wordScore >= 60 ? 'score-ok' : 'score-bad'
+                            }`} title={`Calculated from phoneme average. Original Azure score: ${wordData.originalWordScore}%`}>
+                              {Math.round(wordData.wordScore)}% ⌀
+                            </span>
+                            {wordData.offset !== undefined && (
+                              <span className="word-timing">
+                                @{(wordData.offset / 10000000).toFixed(2)}s
+                                {wordData.duration && ` (${(wordData.duration / 10000000).toFixed(2)}s)`}
+                              </span>
+                            )}
+                            {wordData.errorType && wordData.errorType !== 'None' && (
+                              <span className="error-type">⚠️ {wordData.errorType}</span>
+                            )}
+                          </div>
+                          
+                          <div className="phoneme-breakdown">
+                            <div className="phoneme-label">Expected phonemes:</div>
+                            <div className="phoneme-list">
+                              {wordData.phonemes.filter(p => p.score > 0).map((p, j) => (
+                                <div 
+                                  key={j} 
+                                  className={`phoneme-detail ${
+                                    isPhonemeActive(index, i, j) ? 'phoneme-active' : ''
+                                  }`}
+                                >
+                                  <span 
+                                    className={`phoneme ${
+                                      p.score < 60 ? 'phoneme-bad' : 
+                                      p.score < 80 ? 'phoneme-ok' : 'phoneme-good'
+                                    } ${isPhonemeActive(index, i, j) ? 'phoneme-playing' : ''}`}
+                                    title={`Expected: ${p.phoneme}, Score: ${Math.round(p.score)}%`}
+                                  >
+                                    {p.phoneme}
+                                  </span>
+                                  <span className="phoneme-score-badge">
+                                    {Math.round(p.score)}%
+                                  </span>
+                                  {p.offset !== undefined && (
+                                    <span className="phoneme-time">
+                                      {(p.offset / 10000000).toFixed(3)}s
+                                    </span>
+                                  )}
+                                  {p.nBestPhonemes && p.nBestPhonemes.length > 0 && (
+                                    <div className="actual-phonemes">
+                                      <span className="actual-label">You said:</span>
+                                      {p.nBestPhonemes.slice(0, 3).map((nb, k) => (
+                                        <span key={k} className="actual-phoneme">
+                                          {nb.Phoneme} ({Math.round(nb.Score)}%)
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               )}
               

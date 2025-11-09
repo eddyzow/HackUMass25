@@ -7,32 +7,45 @@ class GeminiService {
       this.genAI = null;
     } else {
       this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+      this.model = this.genAI.getGenerativeModel({ 
+        model: 'gemini-2.0-flash-exp',  // Updated to Gemini 2.0 Flash
+        generationConfig: {
+          temperature: 0.9,  // More creative for conversation
+          maxOutputTokens: 250,  // Slightly more for natural responses
+          topP: 0.95,
+          topK: 40
+        }
+      });
+      console.log('✅ Gemini 2.0 Flash initialized');
     }
   }
 
-  async generateConversationResponse(userMessage, assessment, language, conversationHistory = []) {
+  async generateConversationResponse(userMessage, assessment, language, conversationHistory = [], mode = 'feedback') {
+    console.log(`🤖 Generating response for: "${userMessage}" in ${mode} mode`);
+    console.log(`   Gemini available: ${!!this.genAI}`);
+    
     if (!this.genAI) {
-      return this.getFallbackResponse(userMessage, assessment, language);
+      console.warn('⚠️  No Gemini API - using fallback');
+      return this.getFallbackResponse(userMessage, assessment, language, mode);
     }
 
     try {
-      const prompt = this.buildPrompt(userMessage, assessment, language, conversationHistory);
-      console.log('🤖 Sending prompt to Gemini...');
+      const prompt = this.buildPrompt(userMessage, assessment, language, conversationHistory, mode);
+      console.log(`📝 Prompt being sent to Gemini (first 200 chars):\n${prompt.substring(0, 200)}...`);
       
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
       
-      console.log('✅ Gemini response received:', text.substring(0, 100) + '...');
+      console.log(`✅ Gemini response: "${text}"`);
       return text;
     } catch (error) {
       console.error('❌ Gemini API error:', error.message);
-      return this.getFallbackResponse(userMessage, assessment, language);
+      return this.getFallbackResponse(userMessage, assessment, language, mode);
     }
   }
 
-  buildPrompt(userMessage, assessment, language, conversationHistory) {
+  buildPrompt(userMessage, assessment, language, conversationHistory, mode) {
     const isChineseLearning = language === 'zh-CN';
     const scores = {
       pronunciation: Math.round(assessment.pronunciationScore || 0),
@@ -47,7 +60,41 @@ class GeminiService {
         ).join('\n')}`
       : '';
 
-    const basePrompt = `You are an encouraging, patient language learning tutor specializing in ${isChineseLearning ? 'Mandarin Chinese' : 'English'}.
+    if (mode === 'conversation') {
+      // Conversation mode: Natural dialogue with brief feedback
+      return `You are a friendly, helpful language learning tutor having a natural conversation in ${isChineseLearning ? 'Mandarin Chinese' : 'English'}.
+
+The student is practicing ${isChineseLearning ? 'Chinese' : 'English'} and said: "${userMessage}"
+
+Their pronunciation score: ${scores.pronunciation}%
+
+IMPORTANT INSTRUCTIONS FOR CONVERSATION MODE:
+1. Respond to the ACTUAL CONTENT of what they said
+2. Answer their questions, engage with their topics
+3. If they ask for help (math, advice, etc.), help them!
+4. If they make a statement, respond naturally and ask follow-up questions
+5. ONLY mention pronunciation if it's below 60% - and keep it very brief
+6. Keep total response under 2-3 sentences
+7. ${isChineseLearning ? 'You can mix Chinese and English naturally to help them learn' : 'Use clear, simple English'}
+8. Be helpful, warm, and conversational - like a real conversation partner
+
+Examples:
+- Student: "I need help with my math homework, 1+1?"
+  Good: "Sure! 1 + 1 equals 2. 这很简单！(That's simple!) Do you have more math questions?"
+  Bad: "That's interesting! Tell me more."
+
+- Student: "I like to play basketball"
+  Good: "Basketball is fun! 🏀 What position do you play? Do you have a favorite team?"
+  Bad: "Good pronunciation! You said basketball correctly."
+
+- Student: "What's the weather like?"
+  Good: "I can't check the weather, but it's a good question! What's the weather like where you are?"
+  Bad: "Tell me more about that."
+
+Respond naturally to their actual message:`;
+    } else {
+      // Feedback mode: Detailed analysis
+      return `You are an encouraging, patient language learning tutor specializing in ${isChineseLearning ? 'Mandarin Chinese' : 'English'}.
 
 Current situation:
 - Student said: "${userMessage}"
@@ -56,24 +103,73 @@ Current situation:
 - Accuracy score: ${scores.accuracy}%
 - Fluency score: ${scores.fluency}%${historyContext}
 
-Your role:
-1. Provide encouraging, personalized feedback based on the pronunciation scores
-2. Act as a conversational partner - respond naturally to what they said
-3. If speaking in Chinese mode, mix Chinese and English to help them learn
-4. Point out specific strengths and areas for improvement
-5. Keep responses conversational and under 3 sentences
-6. Build on previous conversation naturally
+Your role in FEEDBACK MODE:
+1. Provide encouraging, detailed feedback based on pronunciation scores
+2. Point out specific strengths and areas for improvement
+3. ${isChineseLearning ? 'Comment on tone accuracy for Chinese' : 'Comment on vowel/consonant clarity'}
+4. Keep responses under 3 sentences
+5. Be constructive and specific
 
 Guidelines:
 - ${scores.pronunciation >= 85 ? 'Celebrate their excellent pronunciation!' : ''}
 - ${scores.pronunciation < 60 ? 'Be extra encouraging and suggest specific improvements' : ''}
 - ${scores.fluency < 70 ? 'Suggest speaking more slowly and smoothly' : ''}
 - ${scores.accuracy < 70 ? 'Mention specific pronunciation aspects to work on' : ''}
-- ${isChineseLearning ? 'For Chinese: comment on tone accuracy if applicable' : 'For English: comment on vowel/consonant clarity'}
 
-Respond naturally as a friendly tutor would:`;
+Respond with detailed feedback:`;
+    }
+  }
 
-    return basePrompt;
+  getFallbackResponse(userMessage, assessment, language, mode = 'feedback') {
+    const score = assessment.pronunciationScore || 0;
+    
+    console.log(`⚠️  Using fallback response (Gemini not available)`);
+    
+    if (mode === 'conversation') {
+      // Conversation mode: Try to be somewhat contextual even without Gemini
+      const lowerMessage = userMessage.toLowerCase();
+      
+      // Check for common patterns
+      if (lowerMessage.includes('help') || lowerMessage.includes('?')) {
+        if (language === 'zh-CN') {
+          return `当然可以帮你！(Of course I can help!) What specific help do you need? Keep practicing your Chinese! 加油！`;
+        } else {
+          return `I'd love to help! Could you tell me more about what you need? Your pronunciation is getting better!`;
+        }
+      } else if (lowerMessage.includes('like') || lowerMessage.includes('love')) {
+        if (language === 'zh-CN') {
+          return `很有意思！Tell me more - what else do you enjoy? 你还喜欢什么？`;
+        } else {
+          return `That sounds great! What else do you enjoy doing?`;
+        }
+      } else {
+        // Generic conversational response
+        if (language === 'zh-CN') {
+          return `有意思！Tell me more about that. 你能详细说说吗？`;
+        } else {
+          return `Interesting! Can you tell me more about "${userMessage}"?`;
+        }
+      }
+    } else {
+      // Feedback mode: Detailed feedback
+      if (language === 'zh-CN') {
+        if (score >= 85) {
+          return `太棒了！"${userMessage}" 的发音非常好 (${Math.round(score)}%)! Your tones are clear. What would you like to practice next?`;
+        } else if (score >= 70) {
+          return `不错！"${userMessage}" is pretty good (${Math.round(score)}%). Focus on your tone accuracy and try again!`;
+        } else {
+          return `好的！I heard "${userMessage}". Let's work on clarity - try speaking more slowly and focus on each tone. 加油！`;
+        }
+      } else {
+        if (score >= 85) {
+          return `Excellent! "${userMessage}" sounded great (${Math.round(score)}%)! Your pronunciation is really improving. Keep it up!`;
+        } else if (score >= 70) {
+          return `Good job! "${userMessage}" was clear (${Math.round(score)}%). Just polish up those vowel sounds a bit more.`;
+        } else {
+          return `I got "${userMessage}". Let's work on clarity - slow down and enunciate each word carefully. You're doing great!`;
+        }
+      }
+    }
   }
 
   async evaluateQualitativeResponse(userMessage, assessment, language) {
@@ -104,28 +200,6 @@ Keep it encouraging and practical.`;
     } catch (error) {
       console.error('❌ Gemini evaluation error:', error.message);
       return this.getBasicEvaluation(assessment);
-    }
-  }
-
-  getFallbackResponse(userMessage, assessment, language) {
-    const score = assessment.pronunciationScore || 0;
-    
-    if (language === 'zh-CN') {
-      if (score >= 85) {
-        return `太棒了！"${userMessage}" 的发音非常好 (${Math.round(score)}%)! Your tones are clear. What would you like to practice next?`;
-      } else if (score >= 70) {
-        return `不错！"${userMessage}" is pretty good (${Math.round(score)}%). Focus on your tone accuracy and try again!`;
-      } else {
-        return `好的！I heard "${userMessage}". Let's work on clarity - try speaking more slowly and focus on each tone. 加油！`;
-      }
-    } else {
-      if (score >= 85) {
-        return `Excellent! "${userMessage}" sounded great (${Math.round(score)}%)! Your pronunciation is really improving. Keep it up!`;
-      } else if (score >= 70) {
-        return `Good job! "${userMessage}" was clear (${Math.round(score)}%). Just polish up those vowel sounds a bit more.`;
-      } else {
-        return `I got "${userMessage}". Let's work on clarity - slow down and enunciate each word carefully. You're doing great!`;
-      }
     }
   }
 

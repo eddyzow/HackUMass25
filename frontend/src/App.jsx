@@ -10,6 +10,7 @@ function App() {
   const [language, setLanguage] = useState('zh-CN');
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState('conversation'); // 'conversation' or 'feedback'
 
   useEffect(() => {
     const loadConversation = async () => {
@@ -27,7 +28,7 @@ function App() {
     setIsLoading(true);
     
     try {
-      const result = await processAudio(audioBlob, sessionId, language);
+      const result = await processAudio(audioBlob, sessionId, language, mode);
       
       console.log('📊 Full API response:', result);
       
@@ -81,11 +82,35 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>🗣️ AI Language Learning Assistant</h1>
-        <LanguageSelector 
-          currentLanguage={language}
-          onLanguageChange={handleLanguageChange}
-        />
+        <div className="header-controls">
+          <div className="mode-selector">
+            <button 
+              className={`mode-btn ${mode === 'conversation' ? 'active' : ''}`}
+              onClick={() => setMode('conversation')}
+            >
+              💬 Conversation
+            </button>
+            <button 
+              className={`mode-btn ${mode === 'feedback' ? 'active' : ''}`}
+              onClick={() => setMode('feedback')}
+            >
+              📊 Feedback
+            </button>
+          </div>
+          <LanguageSelector 
+            currentLanguage={language}
+            onLanguageChange={handleLanguageChange}
+          />
+        </div>
       </header>
+
+      <div className="mode-description">
+        {mode === 'conversation' ? (
+          <p>💬 <strong>Conversation Mode:</strong> Have a natural conversation! The AI responds contextually with brief feedback.</p>
+        ) : (
+          <p>📊 <strong>Feedback Mode:</strong> Get detailed pronunciation analysis with comprehensive feedback on every word and phoneme.</p>
+        )}
+      </div>
 
       <div className="main-content">
         <div className="chat-section">
@@ -95,6 +120,7 @@ function App() {
             <AudioRecorder 
               onRecordingComplete={handleRecordingComplete}
               language={language}
+              mode={mode}
             />
             {isLoading && <div className="loading">🎵 Processing your speech...</div>}
           </div>

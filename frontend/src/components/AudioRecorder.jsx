@@ -102,14 +102,21 @@ function AudioRecorder({ onRecordingComplete, language }) {
           <div className="waveform-container">
             <div className="waveform-bars">
               {[...Array(20)].map((_, i) => {
-                const barHeight = Math.max(10, audioLevel * (0.3 + Math.random() * 0.7));
+                // Create more dramatic height variations based on audio level
+                const baseHeight = 10;
+                const randomVariation = Math.random() * 0.6 + 0.4; // 0.4 to 1.0
+                const audioMultiplier = audioLevel / 100;
+                const vibration = Math.random() * 20 * audioMultiplier; // Random vibration when loud
+                const barHeight = baseHeight + (audioLevel * randomVariation) + vibration;
+                
                 return (
                   <div
                     key={i}
                     className="waveform-bar"
                     style={{
-                      height: `${barHeight}%`,
-                      animationDelay: `${i * 0.05}s`
+                      height: `${Math.min(95, barHeight)}%`,
+                      animationDelay: `${i * 0.05}s`,
+                      animationDuration: `${0.3 + Math.random() * 0.4}s` // Vary animation speed
                     }}
                   />
                 );

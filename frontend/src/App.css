@@ -29,6 +29,15 @@ body {
   border-radius: 12px;
   margin-bottom: 20px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.app-header h1 {
+  color: #667eea;
+  font-size: 28px;
+  margin-bottom: 15px;
+}
+
+.header-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -36,9 +45,48 @@ body {
   gap: 15px;
 }
 
-.app-header h1 {
+.mode-selector {
+  display: flex;
+  gap: 10px;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.mode-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  transition: all 0.3s;
+}
+
+.mode-btn.active {
+  background: white;
   color: #667eea;
-  font-size: 28px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mode-btn:hover {
+  color: #667eea;
+}
+
+.mode-description {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #667eea;
+}
+
+.mode-description p {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
 }
 
 .language-selector {
@@ -257,6 +305,37 @@ body {
   color: #4c1d95;
 }
 
+.language-mismatch-warning {
+  margin: 15px 0;
+  padding: 15px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
+  border: 2px solid #ef4444;
+  border-radius: 8px;
+}
+
+.warning-header {
+  font-size: 16px;
+  font-weight: bold;
+  color: #dc2626;
+  margin-bottom: 8px;
+}
+
+.warning-message {
+  font-size: 14px;
+  color: #991b1b;
+  margin-bottom: 8px;
+}
+
+.warning-suggestion {
+  font-size: 13px;
+  color: #7f1d1d;
+  font-style: italic;
+  padding: 8px;
+  background: rgba(254, 202, 202, 0.3);
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
 .audio-playback {
   margin: 10px 0;
 }
@@ -378,10 +457,12 @@ body {
 }
 
 .phoneme-detail.phoneme-active {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.25);
   border: 2px solid #3b82f6;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+  transform: scale(1.08);
+  z-index: 5;
+  position: relative;
 }
 
 .phoneme {
@@ -395,19 +476,23 @@ body {
 }
 
 .phoneme.phoneme-playing {
-  animation: phoneme-pulse 0.6s ease-in-out infinite;
-  box-shadow: 0 0 15px currentColor;
-  transform: scale(1.15);
+  animation: phoneme-pulse 0.5s ease-in-out infinite;
+  box-shadow: 0 0 20px currentColor;
+  transform: scale(1.2);
+  z-index: 10;
+  position: relative;
 }
 
 @keyframes phoneme-pulse {
   0%, 100% {
     opacity: 1;
-    transform: scale(1.15);
+    transform: scale(1.2);
+    box-shadow: 0 0 20px currentColor;
   }
   50% {
-    opacity: 0.85;
-    transform: scale(1.2);
+    opacity: 0.9;
+    transform: scale(1.25);
+    box-shadow: 0 0 25px currentColor;
   }
 }
 
@@ -604,16 +689,23 @@ body {
   width: 8px;
   background: linear-gradient(to top, #667eea, #764ba2);
   border-radius: 4px;
-  transition: height 0.1s ease;
+  transition: height 0.05s ease-out;
   animation: wave 0.8s ease-in-out infinite alternate;
+  will-change: height;
 }
 
 @keyframes wave {
-  from {
-    opacity: 0.6;
+  0% {
+    opacity: 0.7;
+    transform: scaleY(0.95);
   }
-  to {
+  50% {
+    opacity: 0.9;
+    transform: scaleY(1.0);
+  }
+  100% {
     opacity: 1;
+    transform: scaleY(1.05);
   }
 }
 

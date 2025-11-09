@@ -37,13 +37,14 @@ router.post('/process', upload.single('audio'), async (req, res) => {
   console.log('\n=== NEW AUDIO PROCESSING REQUEST ===');
   console.log('Time:', new Date().toISOString());
   
+  const { sessionId, language = 'zh-CN', mode = 'feedback' } = req.body;
+  const audioFile = req.file;
+  
   try {
-    const { sessionId, language = 'zh-CN' } = req.body;
-    const audioFile = req.file;
-
     console.log('Request details:', {
       sessionId,
       language,
+      mode,
       hasAudioFile: !!audioFile,
       audioFileName: audioFile?.filename
     });
@@ -91,15 +92,19 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       transcription.text,
       assessment,
       language,
-      conversationHistory
+      conversationHistory,
+      mode  // Pass mode to Gemini
     );
 
-    // 6. Generate qualitative evaluation using Gemini
-    const qualitativeEvaluation = await geminiService.evaluateQualitativeResponse(
-      transcription.text,
-      assessment,
-      language
-    );
+    // 6. Generate qualitative evaluation using Gemini (only in feedback mode)
+    let qualitativeEvaluation = null;
+    if (mode === 'feedback') {
+      qualitativeEvaluation = await geminiService.evaluateQualitativeResponse(
+        transcription.text,
+        assessment,
+        language
+      );
+    }
 
     // 7. Save to database
     
@@ -111,7 +116,7 @@ router.post('/process', upload.single('audio'), async (req, res) => {
       role: 'user',
       text: transcription.text,
       audioUrl: `/uploads/${audioFile.filename}`,
-      phonemes: extractPhonemes(assessment.words),
+      phonemes: extractPhonemes(assessment.words, language),
       feedback: {
         pronunciationScore: assessment.pronunciationScore,
         accuracyScore: assessment.accuracyScore,
@@ -156,15 +161,31 @@ router.post('/process', upload.single('audio'), async (req, res) => {
     res.status(400).json({ 
       error: true,
       message: error.message,
-      userFriendlyMessage: getUserFriendlyErrorMessage(error.message, language),
-      suggestions: getErrorSuggestions(error.message, language)
+      userFriendlyMessage: getUserFriendlyErrorMessage(error.message, language || 'en-US'),
+      suggestions: getErrorSuggestions(error.message, language || 'en-US')
     });
   }
 });
 
 // Helper function to extract phonemes with expected vs actual comparison
-function extractPhonemes(words) {
+function extractPhonemes(words, language) {
   if (!words || !Array.isArray(words)) return [];
+  
+  // Check if speaking wrong language (all words have 0% score)
+  const allZeroScores = words.every(word => 
+    !word.Phonemes || word.Phonemes.every(p => (p.PronunciationAssessment?.AccuracyScore || 0) === 0)
+  );
+  
+  if (allZeroScores && words.length > 0) {
+    // Detected wrong language
+    return [{
+      word: '⚠️ Language Mismatch Detected',
+      wordScore: 0,
+      errorType: 'WrongLanguage',
+      detectedLanguage: language === 'zh-CN' ? 'English detected in Chinese mode' : 'Chinese detected in English mode',
+      phonemes: []
+    }];
+  }
   
   return words.map(word => {
     // Recalculate word score based on average phoneme scores
